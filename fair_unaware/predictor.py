@@ -1,5 +1,8 @@
 import warnings
 import numpy as np
+
+import time 
+
 from sklearn.ensemble import RandomForestRegressor
 
 from .utils import check_binary_groups, compute_group_priors
@@ -79,6 +82,7 @@ class UnawareFairRegressor:
         self.random_state = random_state
         self.verbose = verbose
         self.store_diagnostics = store_diagnostics
+        self.timings_ = {} 
 
         # Attributes set in fit
         self.group_labels_ = None
@@ -130,10 +134,12 @@ class UnawareFairRegressor:
         S = np.asarray(S)
         y = np.asarray(y)
         n_samples = X.shape[0]
+
         
         #for the PLOTS
         self.X_ = X
         self.S_ = S
+ 
 
 
         if S.shape[0] != n_samples or y.shape[0] != n_samples:
@@ -146,31 +152,40 @@ class UnawareFairRegressor:
         self.group_priors_ = compute_group_priors(S)
 
         # 2.Fit eta(X)
+        t0= time.perf_counter()
         self.base_regressor_, eta_hat = fit_eta_model(
             X, y, model=self.base_regressor, random_state=self.random_state
         )
+        self.timings_["base_model_fit"] = time.perf_counter() - t0
+
         if self.verbose:
             print("[fit] Fitted base regressor for eta.")
 
         #3. Fit classifier for P(S | X)
+        t0= time.perf_counter()
         self.base_classifier_, proba = fit_s_classifier(
             X, S, clf=self.base_classifier, random_state=self.random_state
         )
         self.classes_ = self.base_classifier_.classes_
         if self.verbose:
             print("[fit] Fitted classifier for P(S|X). Classes:", self.classes_)
+        self.timings_["s_classifier_fit"] = time.perf_counter() - t0
 
         # 4. Compute Δ
+        t0= time.perf_counter()
         delta_hat = compute_delta_from_posteriors(
             proba, self.classes_, self.group_priors_
         )
         if self.verbose:
             print("[fit] Computed delta from posteriors.")
 
+        self.timings_["delta_computation"] = time.perf_counter() - t0
+
         self.eta_hat_ = eta_hat
         self.delta_hat_ = delta_hat
 
         # 5. Build μ⁺, μ⁻
+        t0= time.perf_counter()
         measures = build_plus_minus_measures(
             eta_hat, delta_hat, delta_tol=self.delta_tol
         )
@@ -178,6 +193,7 @@ class UnawareFairRegressor:
         minus_idx = measures["minus_idx"]
         a = measures["a"]
         b = measures["b"]
+        self.timings_["measures_construction"] = time.perf_counter() - t0
         
         #keep the variables for the plots (plots only )
         if self.store_diagnostics:
@@ -212,13 +228,19 @@ class UnawareFairRegressor:
         h_minus, d_minus = measures["h_minus"], measures["d_minus"]
 
         # 6. compute OT cost matrix and solve OT
+        t0= time.perf_counter()
         C = compute_cost_matrix(h_plus, d_plus, h_minus, d_minus)
         if self.verbose:
             print("[fit] Computed OT cost matrix with shape", C.shape)
+        self.timings_["cost_matrix_computation"] = time.perf_counter() - t0
+
+        t0= time.perf_counter()
 
         pi = solve_ot_plan(a, b, C, sinkhorn_reg=self.sinkhorn_reg)
         if self.verbose:
             print("[fit] Solved OT plan.")
+        self.timings_["ot_plan_solution"] = time.perf_counter() - t0
+
 
         if self.store_diagnostics:
             self.C_ = C
@@ -226,11 +248,14 @@ class UnawareFairRegressor:
 
 
         # 7. compute barycentric predictions at μ⁺, μ⁻ supports
+        t0= time.perf_counter()
         f_plus, f_minus = compute_barycentric_predictions_from_plan(
             pi, h_plus, d_plus, h_minus, d_minus, a, b
         )
         if self.verbose:
             print("[fit] Computed barycentric predictions at supports.")
+
+        self.timings_["barycentric_predictions"] = time.perf_counter() - t0
 
         if self.store_diagnostics:
             self.f_plus_ = f_plus
@@ -238,11 +263,13 @@ class UnawareFairRegressor:
 
 
         # 8. fuild full target vector f_target for all samples
+
         f_target = eta_hat.copy()
         f_target[plus_idx] = f_plus
         f_target[minus_idx] = f_minus
 
         # 9.fit final 2D regressor on (eta, delta) -> f_target
+        t0= time.perf_counter()
         Z = np.column_stack([eta_hat, delta_hat])
         if self.fair_regressor is None:
             self.fair_regressor_ = RandomForestRegressor(
@@ -258,6 +285,7 @@ class UnawareFairRegressor:
 
         if self.verbose:
             print("[fit] Fitted final 2D fair regressor on (eta, delta).")
+        self.timings_["fair_regressor_fit"] = time.perf_counter() - t0
 
         return self
 
@@ -281,6 +309,8 @@ class UnawareFairRegressor:
         if not self.fairness_active_ or self.fair_regressor_ is None:
             return self.base_regressor_.predict(X)
 
+        t0 = time.perf_counter()
+
         # 1. eta(X)
         eta_new = self.base_regressor_.predict(X)
         # 2.P(S | X)
@@ -292,6 +322,8 @@ class UnawareFairRegressor:
         # 4.dair regression on (eta, Δ)
         Z_new = np.column_stack([eta_new, delta_new])
         y_pred = self.fair_regressor_.predict(Z_new)
+
+        self.timings_["predict_total"] = time.perf_counter() - t0
         return y_pred
 
     def predict_base(self, X):

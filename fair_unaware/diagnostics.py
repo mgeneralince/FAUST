@@ -196,7 +196,7 @@ def plot_basic_diagnostics(
                 model.h_minus_,
                 model.d_minus_,
                 i_plus=i_plus,
-                j_ref=None,  # let the function choose the cheapest minus partner
+                j_ref=None,  # let the function chose the cheapest minus partner
                 ax=ax7,
                 title="Region where c(x1, x) > c(x1, x_ref)",
             )
@@ -259,6 +259,13 @@ def plot_basic_diagnostics(
                 plot_binned_cost_by_eta(model.C_, model.h_plus_, model.h_minus_, ax=ax4)
                 if save_prefix:
                     fig4.savefig(f"{save_prefix}_binned_cost_eta.png", bbox_inches="tight")
+                
+                #5. Save timings in to a table if available
+    if hasattr(model, "timings_") and save_prefix:
+        with open(f"{save_prefix}_timings.txt", "w") as f:
+            f.write("Step,Time (s)\n")
+            for k, v in model.timings_.items():
+                f.write(f"{k},{v:.6f}\n")
 
 
 

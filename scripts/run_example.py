@@ -38,8 +38,8 @@ def make_synthetic_dataset(n=1000, random_state=0):
     return X, S, Y
 
 
-def main(method="OT"):
-    X, S, Y = make_synthetic_dataset(n=100000, random_state=42)
+def main(method="OT", nb_samples=1000):
+    X, S, Y = make_synthetic_dataset(n=nb_samples, random_state=42)
 
     #unconstrained regressor 
     base_reg = RandomForestRegressor(n_estimators=200, random_state=42)
@@ -82,6 +82,7 @@ def main(method="OT"):
             store_diagnostics=True,  
         )
 
+
     fair_model.fit(X, S, Y)
     y_pred_fair = fair_model.predict(X)
 
@@ -107,8 +108,8 @@ def main(method="OT"):
             X,
             S,
             Y,
-            show=True,
-            save_prefix=f"figs/{method}/example",
+            show=False,
+            save_prefix=f"figs/{method}/{args.nb_samples}/example",
             with_ot_matrices=True,   
         )
     elif method == "Sinkhorn":
@@ -119,9 +120,14 @@ def main(method="OT"):
             S,
             Y,
             show=True,
-            save_prefix=f"figs/{method}/example",
+            save_prefix=f"figs/{method}/{args.nb_samples}/example",
             with_ot_matrices=True,  
         )
+    
+    #store timings 
+    print("Timing breakdown (in seconds):")
+    for k, v in fair_model.timings_.items():
+        print(f"  {k:25s}: {v:.4f}")
 
 
 
@@ -130,6 +136,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Unawareness Fair Regression Example")
     parser.add_argument("--method", type=str, choices=["OT", "Sinkhorn"], default="OT",
                         help="Choose the method for fair regression: 'OT' for Optimal Transport, 'Sinkhorn' for Sinkhorn regularization.")
+    parser.add_argument("--nb_samples", type=int, default=1000,
+                        help="Number of samples in the synthetic dataset.")
     args = parser.parse_args()
-    os.makedirs(f"figs/{args.method}", exist_ok=True)
-    main(method=args.method)
+    os.makedirs(f"figs/{args.method}/{args.nb_samples}", exist_ok=True)
+    main(method=args.method, nb_samples=args.nb_samples)
