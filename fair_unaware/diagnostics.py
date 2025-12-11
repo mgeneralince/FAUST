@@ -14,6 +14,9 @@ from .visualization import (
     plot_min_cost_hard_vs_easy,
     plot_min_cost_easy_only,
     plot_binned_cost_by_eta,
+    plot_eta_delta_scatter_colored_by_y,
+    plot_eta_delta_with_transport_lines,
+    plot_predictions_barycenter_links
 )
 
 
@@ -102,6 +105,8 @@ def plot_basic_diagnostics(
     show=True,
     save_prefix=None,
     with_ot_matrices=False,
+    save_suffix="png",
+    figsize=(12, 8),
 ):
     """
     High-level wrapper that generates a few standard plots
@@ -127,19 +132,103 @@ def plot_basic_diagnostics(
     fig1, ax1 = plt.subplots()
     plot_eta_delta_scatter(model.eta_hat_, model.delta_hat_, S, ax=ax1)
     if save_prefix:
-        fig1.savefig(f"{save_prefix}_eta_delta.png", bbox_inches="tight")
-
-    # (b) prediction distributions per group (before vs after)
-    fig2, ax2 = plt.subplots()
-    plot_prediction_distributions(y_base, y_fair, S, ax=ax2)
+        fig1.savefig(f"{save_prefix}_eta_delta.{save_suffix}", bbox_inches="tight")
+    
+    # (a) bis (eta, delta) scatter colored by y
+    fig1b, ax1b = plt.subplots(figsize= figsize)
+    plot_eta_delta_scatter_colored_by_y(model.eta_hat_, 
+                                        model.delta_hat_, Y, ax=ax1b)
     if save_prefix:
-        fig2.savefig(f"{save_prefix}_pred_dists.png", bbox_inches="tight")
+        fig1b.savefig(f"{save_prefix}_eta_delta_colored_by_Y.{save_suffix}", 
+                      bbox_inches="tight")
+    
+    # (a) ter (eta, delta) scatter with transport lines
+    fig1c, ax1c = plt.subplots()
+    plot_eta_delta_with_transport_lines(
+        model.h_plus_,    
+        model.d_plus_,    
+        model.h_minus_,   
+        model.d_minus_,   
+        model.pi_,        
+        ax=ax1c,
+        title="(eta, delta) with main OT pairings",
+    )
+    if save_prefix:
+        fig1c.savefig(
+            f"{save_prefix}_eta_delta_transport_lines.{save_suffix}",
+            bbox_inches="tight",
+        )
+
+    fig1c, ax1c = plt.subplots(figsize= (12, 8))
+    plot_eta_delta_with_transport_lines(
+        model.h_plus_,
+        model.d_plus_,
+        model.h_minus_,
+        model.d_minus_,
+        model.pi_,
+        ax=ax1c,
+        title="(eta, delta) with main OT pairings",
+        max_lines=100,           # show at most ...lines
+        min_mass_quantile=0.7,   # keep only 30% strongest couplings
+    )
+    if save_prefix:
+        fig1c.savefig(
+            f"{save_prefix}_eta_delta_transport_lines.{save_suffix}",
+            bbox_inches="tight",
+        )
+
+
+    # (a) quater predictions barycenter links
+    fig1d, ax1d = plt.subplots(figsize= (12, 8))
+    plot_predictions_barycenter_links(
+        model.eta_hat_,          
+        model.fair_predictions_, 
+        S,                       
+        n_bins=40,               
+        ax=ax1d,
+        title="Base vs barycenter (per group)",
+    )
+    if save_prefix:
+        fig1d.savefig(
+            f"{save_prefix}_barycenter_links.{save_suffix}",
+            bbox_inches="tight",
+        )
+
+    fig1d, ax1d = plt.subplots(figsize=(12, 8))
+    plot_predictions_barycenter_links(
+        model.eta_hat_,
+        model.fair_predictions_,
+        S,
+        n_bins=40,
+        ax=ax1d,
+        title="Base vs barycenter (per group)",
+        max_lines=150,           # at most 500 lines total
+        min_shift_quantile=0.7,  # only the 30% largest moves
+    )
+    if save_prefix:
+        fig1d.savefig(
+            f"{save_prefix}_barycenter_links.{save_suffix}",
+            bbox_inches="tight",
+        )
+
+
+    # (b) prediction distributions per group
+    fig2, ax2 = plt.subplots()
+    plot_prediction_distributions(y_base, None, S, ax=ax2)
+    if save_prefix:
+        fig2.savefig(f"{save_prefix}_base_pred_dists.{save_suffix}", bbox_inches="tight")
+
+    # (b) bis prediction distributions per group (before vs after)
+    fig2b, ax2b = plt.subplots()
+    plot_prediction_distributions(y_base, y_fair, S, ax=ax2b)
+    if save_prefix:
+        fig2b.savefig(f"{save_prefix}_pred_dists.{save_suffix}", bbox_inches="tight")
 
     # (c) base vs fair scatter
     fig3, ax3 = plt.subplots()
     plot_base_vs_fair_scatter(y_base, y_fair, S, ax=ax3)
     if save_prefix:
-        fig3.savefig(f"{save_prefix}_base_vs_fair_scatter.png", bbox_inches="tight")
+        fig3.savefig(f"{save_prefix}_base_vs_fair_scatter.{save_suffix}", bbox_inches="tight")
 
     # (d) Within-group rank reordering (for each group)
     groups = model.group_labels_
@@ -151,7 +240,7 @@ def plot_basic_diagnostics(
         plot_rank_reordering(model.eta_hat_, y_fair, S, group=g, ax=ax)
 
     if save_prefix:
-        fig4.savefig(f"{save_prefix}_rank_reordering.png", bbox_inches="tight")
+        fig4.savefig(f"{save_prefix}_rank_reordering.{save_suffix}", bbox_inches="tight")
 
     # (e) aggregated OT plan by eta bins (small KxK heatmap)
     if getattr(model, "store_diagnostics", False) and hasattr(model, "pi_") and hasattr(model, "h_plus_"):
@@ -165,7 +254,7 @@ def plot_basic_diagnostics(
             title="Aggregated transport (eta bins)",
         )
         if save_prefix:
-            fig5.savefig(f"{save_prefix}_agg_plan_eta.png", bbox_inches="tight")
+            fig5.savefig(f"{save_prefix}_agg_plan_eta.{save_suffix}", bbox_inches="tight")
 
         # Optional: also keep the full matrices, behind a flag
         if with_ot_matrices and hasattr(model, "C_"):

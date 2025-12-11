@@ -13,7 +13,7 @@ from fair_unaware import UnawareFairRegressor
 from fair_unaware.diagnostics import plot_basic_diagnostics
 
 
-os.makedirs("figs", exist_ok=True)
+os.makedirs("notes/figs", exist_ok=True)
 
 def make_synthetic_dataset(n=1000, random_state=0):
     """
@@ -109,8 +109,9 @@ def main(method="OT", nb_samples=1000):
             S,
             Y,
             show=False,
-            save_prefix=f"figs/{method}/{args.nb_samples}/example",
+            save_prefix=f"notes/figs/{method}/{args.nb_samples}/example",
             with_ot_matrices=True,   
+            save_suffix="pdf"
         )
     elif method == "Sinkhorn":
         print("\nGenerating diagnostic plots (including Sinkhorn internals)...")
@@ -120,7 +121,7 @@ def main(method="OT", nb_samples=1000):
             S,
             Y,
             show=True,
-            save_prefix=f"figs/{method}/{args.nb_samples}/example",
+            save_prefix=f"notes/figs/{method}/{args.nb_samples}/example",
             with_ot_matrices=True,  
         )
     
@@ -131,7 +132,6 @@ def main(method="OT", nb_samples=1000):
 
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Unawareness Fair Regression Example")
     parser.add_argument("--method", type=str, choices=["OT", "Sinkhorn"], default="OT",
@@ -139,5 +139,5 @@ if __name__ == "__main__":
     parser.add_argument("--nb_samples", type=int, default=1000,
                         help="Number of samples in the synthetic dataset.")
     args = parser.parse_args()
-    os.makedirs(f"figs/{args.method}/{args.nb_samples}", exist_ok=True)
+    os.makedirs(f"notes/figs/{args.method}/{args.nb_samples}", exist_ok=True)
     main(method=args.method, nb_samples=args.nb_samples)

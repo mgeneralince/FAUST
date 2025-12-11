@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib.colors import LogNorm
+from scipy.stats import gaussian_kde
 
 
 
@@ -28,35 +29,260 @@ def plot_eta_delta_scatter(eta, delta, S, ax=None, title="(eta, delta) scatter")
     return ax
 
 
-def plot_prediction_distributions(y_base, y_fair, S, ax=None, title="Predictions by group"):
+#not every link, only those with significant mass
+def plot_eta_delta_with_transport_lines(
+    h_plus,
+    d_plus,
+    h_minus,
+    d_minus,
+    pi,
+    ax=None,
+    title="(eta, delta) with main OT pairings",
+    max_lines=None,
+    min_mass_quantile=None,
+):
     """
-    Overlaid histograms (or KDE later) of predictions by group, before vs after fairness.
+    ...
+    max_lines : int or None
+        If not None, randomly subsample at most this many plus points
+        for drawing lines.
+    min_mass_quantile : float in (0,1) or None
+        If not None, only draw lines for plus points whose main coupling
+        mass is >= this quantile of main_mass.
     """
     if ax is None:
         fig, ax = plt.subplots()
 
+    h_plus = np.asarray(h_plus)
+    d_plus = np.asarray(d_plus)
+    h_minus = np.asarray(h_minus)
+    d_minus = np.asarray(d_minus)
+    pi = np.asarray(pi)
+
+    n_plus = h_plus.shape[0]
+
+    # --- base scatter for plus / minus supports ---
+    ax.scatter(h_plus, d_plus, label="plus (Δ>0)", alpha=0.7)
+    ax.scatter(h_minus, d_minus, label="minus (Δ<0)", alpha=0.7)
+
+    if pi.size > 0:
+        # main partner j* and its mass
+        j_star = np.argmax(pi, axis=1)  # shape (n_plus,)
+        main_mass = pi[np.arange(n_plus), j_star]
+        max_mass = main_mass.max() if main_mass.max() > 0 else 1.0
+
+        # candidates: all plus indices
+        idx_plus = np.arange(n_plus)
+
+        # 1) keep only plus points with sufficiently large main_mass
+        if min_mass_quantile is not None:
+            thresh = np.quantile(main_mass, min_mass_quantile)
+            idx_plus = idx_plus[main_mass >= thresh]
+
+        # 2) random subsampling if still too many
+        if max_lines is not None and len(idx_plus) > max_lines:
+            rng = np.random.RandomState(0)  # deterministic for reproducibility
+            idx_plus = rng.choice(idx_plus, size=max_lines, replace=False)
+
+        # draw lines only for selected plus indices
+        for i in idx_plus:
+            j = j_star[i]
+            x1, y1 = h_plus[i], d_plus[i]
+            x2, y2 = h_minus[j], d_minus[j]
+            alpha = 0.1 + 0.6 * (main_mass[i] / max_mass)
+            ax.plot([x1, x2], [y1, y2], color="k", linewidth=0.5, alpha=alpha)
+
+    ax.set_xlabel("eta_hat")
+    ax.set_ylabel("delta_hat")
+    ax.set_title(title)
+    ax.legend(loc="best")
+    return ax
+
+
+def plot_eta_delta_scatter_colored_by_y(
+    eta,
+    delta,
+    y,
+    ax=None,
+    title="(eta, delta) scatter colored by Y",
+):
+    """
+    Scatter plot of (eta, delta), colored by the true target Y.
+
+    Parameters
+    ----------
+    eta : array-like of shape (n_samples,)
+        Base predictions (eta_hat).
+    delta : array-like of shape (n_samples,)
+        Delta_hat values.
+    y : array-like of shape (n_samples,)
+        True target values used for coloring.
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    eta = np.asarray(eta)
+    delta = np.asarray(delta)
+    y = np.asarray(y)
+
+    sc = ax.scatter(eta, delta, c=y, alpha=0.7)
+    cb = plt.colorbar(sc, ax=ax)
+    cb.set_label("Y")
+
+    ax.set_xlabel("eta_hat")
+    ax.set_ylabel("delta_hat")
+    ax.set_title(title)
+
+    return ax
+
+
+def plot_predictions_barycenter_links(
+    eta,
+    f_fair,
+    S,
+    n_bins=30,
+    ax=None,
+    title="Base predictions, barycenter histogram, and links",
+    max_lines=None,
+    min_shift_quantile=None,
+):
+    """
+    ...
+    max_lines : int or None
+        If not None, randomly subsample at most this many lines.
+    min_shift_quantile : float in (0,1) or None
+        If not None, only draw lines for points whose shift
+        |eta - f_fair| is >= this quantile.
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+    eta = np.asarray(eta)
+    f_fair = np.asarray(f_fair)
+    S = np.asarray(S)
+
+    groups = np.unique(S)
+    if len(groups) != 2:
+        raise ValueError("plot_predictions_barycenter_links is designed for exactly 2 groups.")
+
+    # vertical positions for the two groups and the barycenter
+    y_pos = {groups[0]: 0.0, groups[1]: 1.0}
+    y_bary = 0.5
+
+    # --- scatter of base predictions per group, with vertical jitter ---
+    y_scatter = np.empty_like(eta, dtype=float)
+    for idx, g in enumerate(groups):
+        mask = (S == g)
+        jitter = 0.03 * np.random.randn(mask.sum())
+        y_scatter[mask] = y_pos[g] + jitter
+        ax.scatter(
+            eta[mask],
+            y_scatter[mask],
+            alpha=0.7,
+            label=f"S={g}",
+        )
+
+    # --- histogram of fair predictions (barycenter) at y = y_bary ---
+    hist, bin_edges = np.histogram(f_fair, bins=n_bins)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+    if len(bin_centers) > 1:
+        bin_width = bin_edges[1] - bin_edges[0]
+    else:
+        bin_width = 1.0
+
+    if hist.max() > 0:
+        hist_scaled = hist / hist.max() * 0.4
+    else:
+        hist_scaled = hist
+
+    for h, x_c, h_scaled in zip(hist, bin_centers, hist_scaled):
+        if h == 0:
+            continue
+        bottom = y_bary - h_scaled / 2.0
+        rect = plt.Rectangle(
+            (x_c - bin_width / 2.0, bottom),
+            bin_width,
+            h_scaled,
+            alpha=0.3,
+            color="grey",
+        )
+        ax.add_patch(rect)
+
+    # --- decide which points get a line ---
+    n = len(eta)
+    idx_all = np.arange(n)
+
+    # filter by shift magnitude
+    if min_shift_quantile is not None:
+        shifts = np.abs(eta - f_fair)
+        thresh = np.quantile(shifts, min_shift_quantile)
+        idx_all = idx_all[shifts >= thresh]
+
+    # subsample if too many
+    if max_lines is not None and len(idx_all) > max_lines:
+        rng = np.random.RandomState(0)
+        idx_all = rng.choice(idx_all, size=max_lines, replace=False)
+
+    # --- connect each selected point to the barycenter bin ---
+    bin_idx = np.digitize(f_fair, bin_edges) - 1
+    bin_idx = np.clip(bin_idx, 0, n_bins - 1)
+
+    for i in idx_all:
+        x0 = eta[i]
+        y0 = y_scatter[i]
+        x1 = bin_centers[bin_idx[i]]
+        y1 = y_bary
+        ax.plot([x0, x1], [y0, y1], color="k", linewidth=0.5, alpha=0.3)
+
+    ax.set_yticks([y_pos[groups[0]], y_bary, y_pos[groups[1]]])
+    ax.set_yticklabels([f"S={groups[0]}", "barycenter", f"S={groups[1]}"])
+    ax.set_xlabel("prediction")
+    ax.set_title(title)
+    ax.legend(loc="upper right")
+
+    return ax
+
+
+def plot_prediction_distributions(y_base, y_fair, S, ax=None, title="Predictions by group (KDE)"):
+    """
+    Smooth distributions (KDE) of predictions by group, before vs after fairness.
+    """
+
+    y_base = np.asarray(y_base)
+    y_fair = None if y_fair is None else np.asarray(y_fair)
     S = np.asarray(S)
     groups = np.unique(S)
 
+    # Common x-grid covering both base and fair ranges
+    data_min = y_base.min() if y_fair is None else min(y_base.min(), y_fair.min())
+    data_max = y_base.max() if y_fair is None else max(y_base.max(), y_fair.max())
+    x = np.linspace(data_min, data_max, 512)
+
     for g in groups:
         mask = (S == g)
-        ax.hist(
-            y_base[mask],
-            bins=30,
-            alpha=0.4,
-            density=True,
-            label=f"base, S={g}",
-        )
-        ax.hist(
-            y_fair[mask],
-            bins=30,
-            alpha=0.4,
-            density=True,
-            label=f"fair, S={g}",
-        )
+
+        # KDE for base
+        if np.sum(mask) > 1:
+            kde_base = gaussian_kde(y_base[mask])
+            ax.plot(x, kde_base(x), alpha=0.8, label=f"base, S={g}")
+        else:
+            # fallback: single point -> show as vertical line
+            ax.axvline(y_base[mask][0], color="C0", alpha=0.5, label=f"base, S={g}")
+
+        # KDE for fair
+        if y_fair is not None:
+            if np.sum(mask) > 1:
+                kde_fair = gaussian_kde(y_fair[mask])
+                ax.plot(x, kde_fair(x), alpha=0.8, linestyle="--", label=f"fair, S={g}")
+            else:
+                ax.axvline(y_fair[mask][0], color="C1", alpha=0.5, linestyle="--", label=f"fair, S={g}")
 
     ax.set_xlabel("prediction")
     ax.set_ylabel("density")
+    #no y ticks
+    ax.set_yticks([])
+    #no x ticks
+    ax.set_xticks([])
     ax.set_title(title)
     ax.legend()
     return ax
