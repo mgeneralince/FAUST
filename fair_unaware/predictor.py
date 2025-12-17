@@ -145,7 +145,7 @@ class UnawareFairRegressor:
         if S.shape[0] != n_samples or y.shape[0] != n_samples:
             raise ValueError("X, S, y must have the same number of samples.")
         
-        ###STEPS 
+        ###STEPS fllowing the step to have the pluggin f and then predict  
 
         # 1. Check binary groups and priors
         self.group_labels_ = check_binary_groups(S)

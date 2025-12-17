@@ -144,7 +144,10 @@ def solve_ot_plan(a, b, C, sinkhorn_reg=None):
     C = np.asarray(C, dtype=float)
 
     if sinkhorn_reg is None:
-        pi = ot.emd(a, b, C)
+        #increase numItermax for n>3000
+        pi = ot.emd(a, b, C, numItermax=10000000000)
+    
+
     else:
         pi = ot.sinkhorn(a, b, C, sinkhorn_reg)
 

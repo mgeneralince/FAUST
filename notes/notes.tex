@@ -1,0 +1,553 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{mathtools}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black}
+
+% --- quick macros (notes vibe) ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Pp}{\mathbb{P}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\Law}{\mathcal{L}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Sset}{\mathcal{S}}
+\newcommand{\Uset}{\mathcal{U}}
+\newcommand{\push}{\#}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\OT}{\mathrm{OT}}
+\newcommand{\TV}{\mathrm{TV}}
+\newcommand{\sgn}{\mathrm{sgn}}
+\newcommand{\dd}{\,\mathrm{d}}
+
+% color text with commands for comment s
+\newcommand{\marie}[1]{{\color{purple}#1}}
+\newcommand{\remi}[1]{{\color{pink}#1}}
+\newcommand{\vincent}[1]{{\color{orange}#1}}
+
+\setlist[itemize]{topsep=2pt,itemsep=2pt,parsep=0pt,leftmargin=1.2em}
+\setlist[enumerate]{topsep=2pt,itemsep=2pt,parsep=0pt,leftmargin=1.4em}
+
+\title{\vspace{-0.7em}\Large Demographic Parity in regression \& classiffication (unawareness)\\
+\large{\emph{}}}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+\section{Setting}
+Data $(X,S,Y)\in\X\times\Sset\times\R$; $S\in\{1,\dots,K\}$.
+\begin{itemize}
+  \item Group weights $p_s:=\Pp(S=s)$, feature laws $\mu_s:=Law(X\mid S=s)$, overall $\mu=\sum_s p_s\,\mu_s$.
+  \item Bayes regressor (unconstrained): $\eta(x):=\E[Y\mid X=x]$.
+  \item For $f:\X\to\R$, squared risk $R(f)=\E[(Y-f(X))^2] = \E[(Y-\eta(X))^2]+\E[(\eta(X)-f(X))^2]$.
+  \item Pushforward: $f_{\push}\mu$ is law of $f(X)$ when $X\sim\mu$.
+\end{itemize}
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_base_pred_dists.pdf}
+
+\end{figure}
+
+\section{DP}
+\textbf{DP for regression (unawareness):} $f(X)\perp S$,
+i.e.\ $f_{\push}\mu_s$ is the same for all $s$.
+\begin{equation*}
+\min_{f:\X\to\R}\ \E[(Y-f(X))^2]\quad\text{s.t.}\quad f(X)\perp S.
+\end{equation*}
+\emph{Order preservation (within group):} if $\eta(X)<\eta(X')$ and $S=S'$, then $f(X)<f(X')$ a.s.
+
+\medskip
+\textit{Key impossibility:} if $f$ has DP while $\eta$ is not DP, then $f$ cannot preserve order (proof by contrapositive: DP+$\uparrow$ order $\Rightarrow$ $\eta$ DP).
+
+\section{Two groups $\Rightarrow$ reduce to ``excess-mass'' pieces}
+Let $\alpha:=\mu_1-\mu_2$ (\emph{signed} measure). Jordan decomposition $\alpha=\alpha^+-\alpha^-$ with equal mass $m:=\alpha^+(\X)=\alpha^-(\X)=\tfrac12\|\mu_1-\mu_2\|_{\TV}$.
+\begin{equation*}
+\mu_+:=\alpha^+/m,\qquad \mu_-:=\alpha^-/m.
+\end{equation*}
+Supports split $\X$ into $\X_+$ (where group 1 dominates), $\X_-$ (group 2 dominates), and the tie region $\X_=$.
+\begin{equation*}
+\boxed{~f\ \text{is DP} \iff (f_{\push}\mu_+)=(f_{\push}\mu_-)~}
+\end{equation*}
+(\emph{So DP is governed by how $f$ acts on the disagreement regions; $\X_=$ is irrelevant to DP}.)
+
+\section*{3. The 2D lift and the OT cost (this is the main trick)}
+Pick a reference $\mu$ dominating $\mu_\pm$. Define the \emph{signed density gap}
+\begin{equation*}
+\Delta(x):=\begin{cases}
+\dfrac{\dd\mu_+}{\dd\mu}(x), & x\in\X_+,\\[4pt]
+-\dfrac{\dd\mu_-}{\dd\mu}(x), & x\in\X_-,\\
+0, & x\in\X_=,
+\end{cases}
+\qquad\text{and note}\quad
+\dd\mu=\frac{1}{|\Delta|}\dd\mu_\pm\ \text{on }\X_\pm.
+\end{equation*}
+Lift $x\mapsto x^{\uparrow}:=(\eta(x),\Delta(x))=(h,d)\in\Omega:=\{(h,d)\in\R^2:\,d\neq 0\}$.
+Let $\mu_\pm^{\uparrow}$ be the laws of $x^\uparrow$ under $\mu_\pm$.
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_eta_delta.pdf}
+\end{figure}
+
+\medskip
+\textbf{Cost (multi$\to$one):}\quad $c((h,d),y)=\dfrac{(h-y)^2}{|d|}$.
+
+\section*{4. Barycenter program }
+\begin{equation*}
+\boxed{~\min_{\nu\in\mathcal P(\R)}\ \OT_c(\mu_+^{\uparrow},\nu)+\OT_c(\mu_-^{\uparrow},\nu)~}
+\end{equation*}
+This equals the optimal \emph{excess} risk among DP regressors (first reduce risk to $\E[(\eta-f)^2]$, then use $\dd\mu=\dd\mu_\pm/|\Delta|$ on $\X_\pm$).
+
+\section{Collapse to a standard 2-marginal OT}
+For fixed $(x_1,x_2)$ with $x_i=(h_i,d_i)$,
+\begin{equation*}
+\min_y\ \frac{(h_1-y)^2}{|d_1|}+\frac{(h_2-y)^2}{|d_2|}
+\quad\Rightarrow\quad
+y^\star=\frac{\frac{h_1}{|d_1|}+\frac{h_2}{|d_2|}}{\frac{1}{|d_1|}+\frac{1}{|d_2|}},
+\end{equation*}
+and minimum value
+\begin{equation*}
+\boxed{~C((h_1,d_1),(h_2,d_2))=\frac{(h_2-h_1)^2}{|d_1|+|d_2|}~}.
+\end{equation*}
+Hence
+\begin{equation*}
+\min_{\nu}\ \OT_c(\mu_+^{\uparrow},\nu)+\OT_c(\mu_-^{\uparrow},\nu)
+\;=\;\OT_{C}(\mu_+^{\uparrow},\mu_-^{\uparrow}).
+\end{equation*}
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=\linewidth]{figs/OT/1500/example_ot_matrices_full.png}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_agg_plan_eta.pdf}
+\end{figure}
+
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/OT/1500/example_eta_delta_transport_lines.pdf}
+    \small Transport lines from $(\eta,\Delta)$ to the fair prediction (top 30\% largest moves; max 150 lines).
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/OT/1500/example_barycenter_links.pdf}
+    \small Barycenter links from $(\eta,\Delta)$ to the fair prediction (top 30\% largest moves; max 150 links).
+  \end{minipage}
+\end{figure}
+
+\begin{figure}
+  \centering
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_eta_delta_colored_by_Y.pdf}
+
+\end{figure}
+
+
+
+
+\section{Existence, uniqueness, and maps (the mild regularity)}
+\textbf{Assumption (zero mass on graphs).} $\mu_\pm^{\uparrow}$ give zero measure to any set $\{(h,d):h=F(d),\,d\neq 0\}$.
+(this reduces to non-atomicity assumption in the aware setting)\\
+
+\smallskip
+Under this and $\E[Y^2]<\infty$:
+\begin{itemize}
+  \item The barycenter is \emph{unique}: $\nu^{\mathrm{bar}}$.
+  \item Each $\OT_c(\mu_\pm^{\uparrow},\nu^{\mathrm{bar}})$ is realized by a \emph{transport map} $f_\pm:\Omega\to\R$.
+\end{itemize}
+Let $\varphi$ be a $C$-convex Kantorovich potential for $\OT_C(\mu_+^{\uparrow},\mu_-^{\uparrow})$.
+Where $\partial_h\varphi(h,d)$ exists,
+\begin{equation*}
+  \boxed{~f_+(h,d)=h-\frac{|d|}{2}\,\partial_h\varphi(h,d)~}\qquad
+(\text{and symmetrically } f_-).
+\end{equation*}
+
+
+\section*{7. Final form of the optimal fair regressor}
+\begin{equation*}
+  f^\star(x)=
+\begin{cases}
+f_+\big(\eta(x),\Delta(x)\big), & x\in\X_+,\\[4pt]
+f_-\big(\eta(x),\Delta(x)\big), & x\in\X_-,\\[4pt]
+\eta(x), & x\in\X_=.
+\end{cases}
+\qquad\text{and}\qquad
+(f^\star)_{\push}\mu_+=(f^\star)_{\push}\mu_-=\nu^{\mathrm{bar}}.
+\end{equation*}
+
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_pred_dists.pdf}
+\end{figure}
+
+\section{ Nestedness (multi to one OT)}
+Setup: source $(X,\mu)\subset\R^m$, target $(Y,\nu)\subset\R$, cost $c(x,y)$ differentiable in $y$.
+Define sublevel sets using the \emph{marginal cost}
+\begin{equation*}
+X_{\le}(y,k):=\{x\in\X:\,\partial_y c(x,y)\le k\}.
+\end{equation*}
+For each $y$, choose $k(y)$ so that $\mu\big(X_{\le}(y,k(y))\big)=F_\nu(y)$ where $F_\nu$ is the CDF of $\nu$.
+
+\textbf{Nestedness:}
+\begin{equation*}
+y_1<y_2\ \Longrightarrow\ X_{\le}\!\big(y_1,k(y_1)\big)\subseteq X_{\le}\!\big(y_2,k(y_2)\big).
+\end{equation*}
+Consequence: existence of a Monge map $T:\X\to Y$ with
+$\partial_y c\big(x,T(x)\big)=k\big(T(x)\big)$ a.e.\ (no mass splitting).
+
+\medskip
+\emph{Tiny example.} If $c(x,y)=\tfrac12\|x\|^2-y\,x_1$, then $\partial_y c(x,y)=-x_1$, so $X_{\le}(y,k)=\{x_1\ge -k\}$ (independent of $y$). Picking $k(y)$ to match $F_\nu(y)$ makes these sets nested $\Rightarrow$ a map depending on $x_1$ only.
+
+\section{Classification link (cost-sensitive, $Y\in\{0,1\}$)}
+For weight $y\in[0,1]$,
+\begin{equation*}
+R_y(g)=y\,\Pp(Y=0,\,g(X)=1)+(1-y)\,\Pp(Y=1,\,g(X)=0),\quad g:\X\to\{0,1\}.
+\end{equation*}
+Under DP and a \emph{nestedness} condition, the optimal fair classifiers are \emph{thresholds} of $f^\star$:
+\begin{equation*}
+g_y^\star(x)=\1\{\,f^\star(x)\ge t(y)\,\},
+\end{equation*}
+and the family $\{g_y^\star\}_y$ recovers $f^\star$ (up to null sets). Without nestedness this equivalence can fail.
+
+\section{Awareness VS unawareness }
+\begin{itemize}
+  \item \textbf{Awareness} (can use $S$): DP-optimal regressor is a \emph{groupwise} OT/quantile match to a common barycenter; preserves within-group order; often closed-form via CDF$\leftrightarrow$quantile.
+  \item \textbf{Unawareness}: DP forces a \emph{2D$\to$1D} OT barycenter depending on $(\eta,\Delta)$; no general closed form; order preservation can \emph{fail}.
+\end{itemize}
+
+\section{ In practice }
+\begin{enumerate}
+  \item Estimate $\widehat\eta(x)$ and $\widehat\Delta(x)$ (need $\widehat{\Pp}(S=s\mid X=x)$ or density ratios).
+  \item Build empirical $\widehat\mu_\pm^{\uparrow}$ on samples from $\X_\pm$.
+  \item Solve $\OT_C$ with $C((h_1,d_1),(h_2,d_2))={(h_2-h_1)^2}/{(|d_1|+|d_2|)}$ to get maps $\hat f_\pm$.
+  \item Output $\hat f^\star$ piecewise on $(\X_+,\X_-,\X_=)$ as above.
+\end{enumerate}
+
+\section{defs}
+\begin{itemize}
+  \item \textbf{DP:} $f(X)\perp S$ $\iff$ $f_{\push}\mu_s$ independent of $s$.
+  \item \textbf{Pushforward:} $f_{\push}\mu(A)=\mu(f^{-1}(A))$.
+  \item \textbf{Jordan decomposition:} $\alpha=\alpha^--\alpha^+$ with disjoint supports, $|\alpha|=\alpha^++\alpha^-$.
+  \item \textbf{Barycenter (here):} $\nu$ minimizing $\OT$-distance sum from sources.
+  \item \textbf{Nestedness:} monotone growth in $y$ of $\partial_y c$-sublevel sets with prescribed $\mu$-mass.
+  \item \textbf{Kantorovich potential:} dual function whose subgradient characterizes optimal plans/maps.
+\end{itemize}
+
+\section{formuless}
+\begin{equation*}
+\boxed{~c((h,d),y)=\frac{(h-y)^2}{|d|}~},\qquad
+\boxed{~C((h_1,d_1),(h_2,d_2))=\frac{(h_2-h_1)^2}{|d_1|+|d_2|}~},
+\end{equation*}
+\begin{equation*}
+\boxed{~f^\star(x)=
+\begin{cases}
+\eta(x)-\dfrac{|\Delta(x)|}{2}\,\partial_h\varphi(\eta(x),\Delta(x)), & x\in\X_+\cup\X_-,\\[4pt]
+\eta(x), & x\in\X_=.
+\end{cases}~}.
+\end{equation*}
+
+\newpage
+
+
+
+\section{what porblem do they solve?}
+We want regression under \textbf{demographic parity (DP)} in the \textbf{unawareness} setting:
+the predictor cannot use $S$ at inference time, but we still want $\widehat Y \perp S$.
+
+Key design choice: build a \emph{smooth convex dual objective} whose stochastic gradients can be
+computed from \emph{unlabeled} $X$ only, enabling \textbf{online post-processing} on a stream of i.i.d.\ $X$.
+
+\section{Setting and notation}
+Data $(X,S,Y)\in \R^d \times [K]\times \R$ with unknown law $P$.
+\begin{itemize}
+  \item Regression function: $\eta(x) := \E[Y\mid X=x]$.
+  \item Sensitive marginals: $p_s := \Pp(S=s)$, and vector $p=(p_s)_{s\in[K]}$.
+  \item Sensitive predictor / propensity: $\tau(x) := (\tau_s(x))_{s\in[K]}$ with $\tau_s(x):=\Pp(S=s\mid X=x)$.
+\end{itemize}
+
+\paragraph{Randomized predictors (unawareness).}
+A randomized prediction function is a Markov kernel
+\begin{equation*}
+\pi: 
+\begin{cases}
+  \mathcal{B}(\R)\times \R^d &\to [0,1],\\
+  \qquad B&\mapsto \pi(B\mid x).
+\end{cases}
+\end{equation*}
+It induces a prediction random variable $\widehat Y_\pi$ by
+\begin{equation*}
+Law(\widehat Y_\pi \mid X=x, S=s)=\pi(\cdot\mid x).
+\end{equation*}
+\textbf{Remark 2.1:} deterministic predictors correspond to Dirac kernels
+$\pi(\cdot\mid x)=\delta_{g(x)}$, giving $\widehat Y_\pi=g(X)$. Also, $\pi$ specifies the joint law
+of $(X,S,\widehat Y_\pi)$, and to relate it to $(X,S,Y)$ one may assume conditional independence
+$\widehat Y_\pi \perp Y \mid (X,S)$ so that $(X,S,Y,\widehat Y_\pi)$ is well-defined.
+
+\section{Demographic parity and risk}
+\paragraph{DP.}
+A predictor $\pi$ satisfies demographic parity if
+\begin{equation*}
+\widehat Y_\pi \perp S.
+\end{equation*}
+This is \emph{distributional}, not pointwise in $x$.
+
+\paragraph{Risk.}
+They measure performance against $\eta$ (excess risk):
+\begin{equation*}
+R(\pi) := \E\big[(\widehat Y_\pi-\eta(X))^2\big]
+        = \E\Big[\int_{\R} (\widehat y-\eta(X))^2\,\pi(d\widehat y\mid X)\Big].
+\end{equation*}
+
+\section{discretization of the prediction range}
+They force the predictor outputs to lie on a \textbf{fixed finite grid}.
+
+\paragraph{Bounded signal assumption.}
+Assume there exists $B>0$ such that $|\eta(X)|\le B$ a.s.
+
+\paragraph{Grid.}
+For an integer $L\ge 1$, define the uniform grid on $[-B,B]$
+\begin{equation*}
+\widehat{\mathcal Y}_L := \left\{ \widehat y_\ell := \frac{\ell B}{L} : \ell\in [[L]]:=\{-L,\ldots,L\}\right\},
+\qquad |\widehat{\mathcal Y}_L|=2L+1.
+\end{equation*}
+A feasible predictor must satisfy $Supp(\pi(\cdot\mid x))=\widehat{\mathcal Y}_L$ for all $x$.
+
+\paragraph{Why discretize?}
+Because with a fixed finite support, DP reduces to finitely many \emph{linear} constraints on the
+probabilities $\pi(\ell\mid x)$:
+\begin{equation*}
+\Pp(\widehat Y_\pi=\widehat y_\ell\mid S=s)=\Pp(\widehat Y_\pi=\widehat y_\ell)
+\quad\Longleftrightarrow\quad
+\E[\pi(\ell\mid X)\mid S=s]=\E[\pi(\ell\mid X)].
+\end{equation*}
+They allow slack via thresholds $\varepsilon=(\varepsilon_s)_{s\in[K]}$ and define (per group, per bin)
+\begin{equation*}
+U_s(\pi,\ell):=\Big|\E[\pi(\ell\mid X)\mid S=s]-\E[\pi(\ell\mid X)]\Big| \le \varepsilon_s.
+\end{equation*}
+
+\paragraph{Important sanity point \marie{(parce que j'ai eu un doute)}: this is \emph{not} turning regression into classification.}
+The algorithm learns a \emph{distribution} over grid values; you can output either a sample
+$\widehat Y_\pi$ or the mean $\E[\widehat Y_\pi\mid X=x]=\sum_{\ell} \widehat y_\ell\,\pi(\ell\mid x)$,
+which is still a real-valued regressor. The discretization is an algorithmic device to make DP constraints finite.
+
+\section{Entropic regularization $\Rightarrow$ smooth dual convex program}
+Solving the discretized constrained problem directly is a large LP in dimension $\Omega(LK)$, so they
+switch to an entropic-regularized variant \marie{(comme c'est leur gros argument je pense que dans la comparaison il faudra voir la complexité temporelle \emph{a minima})}.
+
+\paragraph{Entropy-regularized risk.}
+Let $\Psi(\mu)=\sum_{y\in Supp(\mu)}\mu(y)\log\mu(y)$ denote negative entropy. For $\beta>0$:
+\begin{equation*}
+R_\beta(\pi):=R(\pi) + \frac{1}{\beta}\E\big[\Psi(\pi(\cdot\mid X))\big].
+\end{equation*}
+
+\paragraph{Dual variables and key reparameterization.}
+Define
+\begin{equation*}
+t(x):= \mathbf{1} - \frac{\tau(x)}{p}\in\R^K \qquad (\text{componentwise division}),
+\qquad
+r_\ell(x):=\big(\eta(x)-\widehat y_\ell\big)^2.
+\end{equation*}
+
+\subsection{Lemma 3.1 (the main structural lemma)}
+The entropic-regularized problem admits a solution that can be written explicitly in terms of
+nonnegative dual matrices $\Lambda=(\lambda_{\ell s})$ and $V=(\nu_{\ell s})$, as follows. \marie{2 matrices parce que contrainte en valeur absolue}
+
+\paragraph{Dual objective (smooth convex).}
+Let $\lambda_\ell=(\lambda_{\ell s})_{s\in[K]}$ and $\nu_\ell=(\nu_{\ell s})_{s\in[K]}$.
+Define the log-sum-exp at temperature $\beta$ by
+\begin{equation*}
+\mathrm{LSE}_\beta(w)=\beta^{-1}\log\Big(\sum_j e^{\beta w_j}\Big),
+\end{equation*}
+and the soft-argmax / softmax by $\sigma_j(w)=\frac{e^{w_j}}{\sum_i e^{w_i}}$.
+Then define
+\begin{equation*}
+F(\Lambda,V):=
+\E\Big[
+\mathrm{LSE}_\beta\Big( \big(\langle \lambda_\ell-\nu_\ell,\,t(X)\rangle - r_\ell(X)\big)_{\ell\in[[L]]}\Big)
+\Big]
+\;+\;
+\sum_{\ell\in[[L]]}\langle \lambda_\ell+\nu_\ell,\varepsilon\rangle,
+\quad \Lambda,V\ge 0.
+\end{equation*}
+
+\paragraph{Primal solution (softmax form).}
+If $(\Lambda^\star,V^\star)$ minimizes $F$, then an optimal predictor is
+\begin{equation*}
+\boxed{
+\pi_{\Lambda^\star,V^\star}(\ell\mid x)
+=
+\sigma_\ell\!\left(
+\beta\big(\langle \lambda^\star_{\ell'}-\nu^\star_{\ell'},\,t(x)\rangle - r_{\ell'}(x)\big)_{\ell'\in[[L]]}
+\right).
+}
+\end{equation*}
+
+\paragraph{Interpretation.}
+When $\Lambda=V=0$, (no fairness constraints), we have
+\begin{equation*}
+\pi_{0,0}(\ell\mid x)\propto \exp\big(-\beta(\eta(x)-\widehat y_\ell)^2\big),
+\end{equation*}
+so the distribution concentrates around the grid point closest to $\eta(x)$; the dual terms then
+reweight bins to enforce DP across groups.
+
+\subsection{Regularity + why gradient norm matters (Lemma 3.4 + 3.5)}
+Let
+\begin{equation*}
+\sigma^2 := 2\sum_{s\in[K]}\frac{1-p_s}{p_s}.
+\end{equation*}
+Then $\nabla F$ is $(\beta\sigma^2)$-Lipschitz, so larger $\beta$ makes $F$ less smooth.
+
+Since the dual domain is constrained ($\Lambda,V\ge 0$), they use the \textbf{gradient mapping}
+(for stepsize $\alpha>0$)
+\begin{equation*}
+G_\alpha(\Lambda,V):=
+\frac{(\Lambda,V)-\big((\Lambda,V)-\alpha\nabla F(\Lambda,V)\big)_+}{\alpha},
+\end{equation*}
+where $(\cdot)_+$ is coordinatewise projection onto $\R_+^{2(2L+1)K}$.
+
+\paragraph{Lemma 3.5 (key implication).}
+For any $(\Lambda,V)\ge 0$, the \emph{fairness violation} of $\pi_{\Lambda,V}$ is controlled by
+$\|G_\alpha(\Lambda,V)\|$, and the \emph{risk suboptimality} is bounded by a term linear in
+$\|G_\alpha(\Lambda,V)\|$ plus the entropic bias $\log|\widehat{\mathcal Y}_L|/\beta$.
+
+Moral: they need algorithms that directly control $\E\|G_\alpha\|^2$ with clean statistical rates.
+
+\section{Algorithm: online unlabeled post-processing (Algorithm 1)}
+Inputs: $L$, $\beta$, number of stochastic gradient calls $T$, $p$, $B$, and functions $\eta,\tau$.
+\begin{enumerate}
+  \item Build grid $\widehat{\mathcal Y}_L$.
+  \item Define $F(\Lambda,V)$ as above; set smoothness proxy $M=\beta\sigma^2$.
+  \item Run a black-box stochastic optimizer $\mathcal{A}$ on $F$ for $T$ stochastic gradients to get $(\widehat\Lambda,\widehat V)$.
+  \item Output $\pi_{\widehat\Lambda,\widehat V}$ via the softmax formula.
+\end{enumerate}
+
+\paragraph{Stochastic gradient oracle uses only $X$.}
+They derive $\nabla F$ explicitly and estimate it by sampling a single $X\sim P_X$ and removing the expectation.
+So the post-processing step can be done on a \textbf{stream} of unlabeled $X$ without storing data.
+
+\paragraph{Unknown $\eta$ and $\tau$.}
+Train $\widehat\eta$ and $\widehat\tau$ on a labeled dataset, then run the same post-processing
+on an independent unlabeled stream; additional error terms appear that depend on the quality of
+$\widehat\eta,\widehat\tau$.
+
+\section{Main guarantees (Theorem 5.1 + plugin extension)}
+They choose parameters as functions of the number of unlabeled samples/iterations $T$
+(e.g.\ $L\asymp \sqrt{T}$ and a matching $\beta$ schedule) and prove that:
+\begin{itemize}
+  \item fairness violation decreases at a rate essentially $1/\sqrt{T}$ (up to logs and constants),
+  \item excess risk (vs.\ a natural deterministic DP benchmark based on Kolmogorov--Smirnov-type constraints)
+        also decreases like $1/\sqrt{T}$,
+  \item dependence on $K$ appears through $\sigma$ and on constraint tightness through $\|(\Lambda^\star,V^\star)\|$.
+\end{itemize}
+They also provide post-processing-style bounds for the plug-in version with $(\widehat\eta,\widehat\tau)$,
+separating estimation error from optimization/post-processing error.
+
+\section{what is actually run}
+Datasets:
+\begin{itemize}
+  \item Law School: predict GPA (scaled to $[0,1]$),
+  \item Communities \& Crime: predict violent crime rate (scaled to $[0,1]$),
+\end{itemize}
+with ethnicity as sensitive attribute (binary: white vs non-white).
+
+Pipeline:
+split into train / unlabeled / test (0.4 / 0.4 / 0.2);
+train $\widehat\eta$ via LinearRegression and $\widehat\tau$ via LogisticRegression;
+run Algorithm 1 using the unlabeled split; evaluate risk and unfairness vs iterations.
+
+They compare against Agarwal--Dudik--Wu (2019)in two training regimes
+(with and without access to unlabeled data) $\implies$ competitive or better tradeoffs.
+
+\section{Formules}
+\begin{itemize}
+  \item Grid indices: $[[L]]=\{-L,\ldots,L\}$, grid values $\widehat y_\ell=\ell B/L$.
+  \item Slack DP constraints: $U_s(\pi,\ell)\le \varepsilon_s$.
+  \item Dual objective: $F(\Lambda,V)=\E[\mathrm{LSE}_\beta(\cdots)]+\sum_\ell \langle\lambda_\ell+\nu_\ell,\varepsilon\rangle$.
+  \item Output predictor: $\pi_{\Lambda,V}(\ell\mid x)=\mathrm{softmax}_\ell\big(\beta(\langle\lambda_{\ell'}-\nu_{\ell'},t(x)\rangle-r_{\ell'}(x))\big)$.
+  \item Gradient mapping: $G_\alpha(\Lambda,V)=\frac{(\Lambda,V)-((\Lambda,V)-\alpha\nabla F)_+}{\alpha}$.
+\end{itemize}
+
+\newpage 
+\section{Comparison: OT characterization vs online convex post-processing}
+
+\subsection*{One-line takeaway}
+\begin{itemize}
+  \item \textbf{Divol--Gaucher:} population-level characterization of the optimal DP regressor via an OT barycenter
+        on a lifted space $(\eta,\Delta)$ (mainly two groups).
+  \item \textbf{Taturyan--Chzhen--Hebiri:} practical post-processing algorithm with finite-sample bounds,
+        based on discretization + entropic smoothing + stochastic convex optimization, usable with an unlabeled stream of $X$.
+\end{itemize}
+
+\subsection*{Differences}
+\begin{center}
+\begin{tabular}{@{}p{3.2cm}p{6.2cm}p{6.2cm}@{}}
+\toprule
+ & \textbf{OT} & \textbf{Unlabeled post-processing} \\
+\midrule
+Primary goal
+& Characterize $f^\star$ solving \(\min_f \E[(Y-f(X))^2]\) s.t.\ \(f(X)\perp S\) (population optimum).
+& IMPLEMENTABLE estimator achieving (approx.) DP with rates, using post-processing. \\
+\addlinespace
+Groups
+& Focuses on \(\,S\in\{1,2\}\) (extension to $K>2$ left for future work).
+& Handles \(\,S\in[K]\) and discusses multiple protected attributes. \\
+\addlinespace
+Form of predictor
+& Deterministic regressor \(f^\star:\X\to\R\), described via OT on a lift \((\eta(x),\Delta(x))\).
+& Randomized predictor \(\pi(\cdot\mid x)\) supported on a \textbf{grid} \(\widehat{\mathcal Y}_L\) (can output a sample or the mean). \\
+\addlinespace
+How DP is enforced
+& \textbf{Exact} DP constraint at the population level (\(f(X)\perp S\)).
+& \textbf{Relaxed / discretized} DP constraints on grid atoms (with slack \(\varepsilon\)); plus entropic regularization. \\
+\addlinespace
+Key mathematical object
+& OT barycenter with a \emph{multi-to-one} cost after lifting; DP governed by ``disagreement'' regions and a signed density gap \(\Delta\).
+& Smooth convex dual objective \(F(\Lambda,V)\); optimal \(\pi\) is an explicit \textbf{softmax} (Lemma 3.1). \\
+\addlinespace
+What information is implicitly needed
+& Needs \(\eta(x)\) and \(\Delta(x)\), where \(\Delta\) depends on group-membership probabilities \(\Pp(S=s\mid X=x)\) (implicit use of $S$).
+& Needs \(\eta(x)\) and \(\tau(x)=(\Pp(S=s\mid X=x))_{s}\) to form \(t(x)=\mathbf{1}-\tau(x)/p\). \\
+\addlinespace
+Computation / “online”
+& typically offline
+& Stochastic convex optimization with an oracle computable from \emph{unlabeled} i.i.d.\ samples of \(X\); suited for streaming. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Fainress through $\Delta(x)$ or $\tau(x)$.
+
+\begin{itemize}
+  \item \textbf{OT characterization} more interpretable:
+        what the optimal $f^\star$ looks like, why order-preservation can fail, and how DP reshapes predictions geometrically.
+  \item \textbf{unlabeled post-processing} more applicable \emph{pipeline}:
+        a concrete algorithm with controllable approximation  $(L,\beta,\varepsilon)$ and finite-sample/optimization guarantees.
+\end{itemize}
+
+$\implies$ interesting to see the statiqsticak guarantees we can have with the OT post-processing + see what happens with $K>2$.
+
+
+
+
+\end{document}
