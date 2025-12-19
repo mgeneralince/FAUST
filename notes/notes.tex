@@ -228,53 +228,6 @@ $\partial_y c\big(x,T(x)\big)=k\big(T(x)\big)$ a.e.\ (no mass splitting).
 \emph{Tiny example.} If $c(x,y)=\tfrac12\|x\|^2-y\,x_1$, then $\partial_y c(x,y)=-x_1$, so $X_{\le}(y,k)=\{x_1\ge -k\}$ (independent of $y$). Picking $k(y)$ to match $F_\nu(y)$ makes these sets nested $\Rightarrow$ a map depending on $x_1$ only.
 
 
-\subsection{Ordering preservation between $\hat\eta$ (before correction) and $\tilde y$ (after correction).}
-Let $n$ be the number of individuals, and let $\pi_{\hat\eta}$ (resp. $\pi_{\tilde y}$) denote the permutation that sorts $\hat\eta$ (resp. $\tilde y$) in increasing order. We report the following rank-based metrics.
-
-\begin{enumerate}
-
-\item \textbf{Spearman rank correlation} $\rho_S$.
-\[
-\rho_S(\hat\eta,\tilde y)
-\;=\;
-\mathrm{corr}\!\big(\mathrm{rank}(\hat\eta),\,\mathrm{rank}(\tilde y)\big).
-\]
-\emph{Interpretation.} Measures global monotonic agreement between the two rankings. 
-$\rho_S=1$ means perfect rank preservation; $\rho_S\approx 0$ indicates weak association; $\rho_S<0$ indicates an inverted ranking.
-
-\item \textbf{Kendall's $\tau_b$}.
-\[
-\tau_b(\hat\eta,\tilde y)
-\;=\;
-\frac{C-D}{\sqrt{(C+D+T_{\hat\eta})(C+D+T_{\tilde y})}},
-\]
-where $C$ (resp. $D$) is the number of \emph{concordant} (resp. \emph{discordant}) pairs $(i,j)$, and 
-$T_{\hat\eta}$ (resp. $T_{\tilde y}$) counts ties in $\hat\eta$ (resp. $\tilde y$).\\
-\emph{Interpretation.} Pairwise notion of rank consistency: it estimates the fraction of pairs that keep the same order (accounting for ties). 
-$\tau_b=1$ means all pairs preserve their order; smaller values indicate more inversions.
-
-\item \textbf{Mean absolute rank displacement} $\mathrm{MAD}_{\mathrm{rank}}$.
-\[
-\mathrm{MAD}_{\mathrm{rank}}(\hat\eta,\tilde y)
-\;=\;
-\frac{1}{n(n-1)}\sum_{i=1}^n 
-\bigl|\mathrm{rank}(\hat\eta_i)-\mathrm{rank}(\tilde y_i)\bigr|.
-\]
-\emph{Interpretation.} Average amount (in relative rank units) by which individuals move in the ordering after correction.
-Values near $0$ = no reordering; values closer to $1$ = large mélange.
-
-\item \textbf{Top-$k$ Jaccard overlap} $J_k$.
-Let $\mathrm{Top}_k(z)=\{i:\ z_i \text{ is among the } k \text{ largest entries of } z\}$.
-\[
-J_k(\hat\eta,\tilde y)
-\;=\;
-\frac{\bigl|\mathrm{Top}_k(\hat\eta)\cap \mathrm{Top}_k(\tilde y)\bigr|}
-{\bigl|\mathrm{Top}_k(\hat\eta)\cup \mathrm{Top}_k(\tilde y)\bigr|}.
-\]
-\emph{Interpretation.} Stability of the \emph{selected} set (e.g., admissions/shortlist): $J_k=1$ means the same top-$k$ individuals are selected before/after correction; $J_k=0$ means the top-$k$ sets are disjoint.
-\end{enumerate}
-% Requires in preamble: \usepackage{float}  % to use [H] exact placement
-
 \begin{table}[t]
   \centering
   \begin{tabular}{lrrrr}
@@ -643,5 +596,56 @@ Main difference in implementation:
 \begin{itemize}
   \item OT: we learn the transport on the same data we trained on they use the $X_unlab$ to 
 \end{itemize}
+
+\newpage
+
+
+\section{Ordering preservation between $\hat\eta$ (before correction) and $\tilde y$ (after correction).}
+Let $n$ be the number of individuals, and let $\pi_{\hat\eta}$ (resp. $\pi_{\tilde y}$) denote the permutation that sorts $\hat\eta$ (resp. $\tilde y$) in increasing order. We report the following rank-based metrics.
+
+\begin{enumerate}
+
+\item \textbf{Spearman rank correlation} $\rho_S$.
+\[
+\rho_S(\hat\eta,\tilde y)
+\;=\;
+\mathrm{corr}\!\big(\mathrm{rank}(\hat\eta),\,\mathrm{rank}(\tilde y)\big).
+\]
+\emph{Interpretation.} Measures global monotonic agreement between the two rankings. 
+$\rho_S=1$ means perfect rank preservation; $\rho_S\approx 0$ indicates weak association; $\rho_S<0$ indicates an inverted ranking.
+
+\item \textbf{Kendall's $\tau_b$}.
+\[
+\tau_b(\hat\eta,\tilde y)
+\;=\;
+\frac{C-D}{\sqrt{(C+D+T_{\hat\eta})(C+D+T_{\tilde y})}},
+\]
+where $C$ (resp. $D$) is the number of \emph{concordant} (resp. \emph{discordant}) pairs $(i,j)$, and 
+$T_{\hat\eta}$ (resp. $T_{\tilde y}$) counts ties in $\hat\eta$ (resp. $\tilde y$).\\
+\emph{Interpretation.} Pairwise notion of rank consistency: it estimates the fraction of pairs that keep the same order (accounting for ties). 
+$\tau_b=1$ means all pairs preserve their order; smaller values indicate more inversions.
+
+\item \textbf{Mean absolute rank displacement} $\mathrm{MAD}_{\mathrm{rank}}$.
+\[
+\mathrm{MAD}_{\mathrm{rank}}(\hat\eta,\tilde y)
+\;=\;
+\frac{1}{n(n-1)}\sum_{i=1}^n 
+\bigl|\mathrm{rank}(\hat\eta_i)-\mathrm{rank}(\tilde y_i)\bigr|.
+\]
+\emph{Interpretation.} Average amount (in relative rank units) by which individuals move in the ordering after correction.
+Values near $0$ = no reordering; values closer to $1$ = large mélange.
+
+\item \textbf{Top-$k$ Jaccard overlap} $J_k$.
+Let $\mathrm{Top}_k(z)=\{i:\ z_i \text{ is among the } k \text{ largest entries of } z\}$.
+\[
+J_k(\hat\eta,\tilde y)
+\;=\;
+\frac{\bigl|\mathrm{Top}_k(\hat\eta)\cap \mathrm{Top}_k(\tilde y)\bigr|}
+{\bigl|\mathrm{Top}_k(\hat\eta)\cup \mathrm{Top}_k(\tilde y)\bigr|}.
+\]
+\emph{Interpretation.} Stability of the \emph{selected} set (e.g., admissions/shortlist): $J_k=1$ means the same top-$k$ individuals are selected before/after correction; $J_k=0$ means the top-$k$ sets are disjoint.
+\end{enumerate}
+% Requires in preamble: \usepackage{float}  % to use [H] exact placement
+
 
 \end{document}
