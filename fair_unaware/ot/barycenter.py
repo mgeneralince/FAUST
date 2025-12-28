@@ -31,8 +31,6 @@ def build_plus_minus_measures(eta, delta, delta_tol=1e-6):
 
     if delta.shape[0] != n: ##### debuggg RETIRER APR77S 
         raise ValueError("eta and delta must have thesame length.")
-    
-
 
     plus_mask = delta > delta_tol
     minus_mask = delta < -delta_tol
@@ -197,6 +195,12 @@ def compute_barycentric_predictions_from_plan(
     abs_dp = np.abs(d_plus)[:, None]
     abs_dm = np.abs(d_minus)[None, :]
 
+    #fr entropic warnings
+    delta_floor = 1e-2
+
+    abs_dp = np.maximum(abs_dp, delta_floor)
+    abs_dm = np.maximum(abs_dm, delta_floor)
+
     inv_dp = 1.0 / (abs_dp + eps)
     inv_dm = 1.0 / (abs_dm + eps)
 
@@ -214,5 +218,14 @@ def compute_barycentric_predictions_from_plan(
 
     f_plus = weighted_sum_plus / (a + eps)
     f_minus = weighted_sum_minus / (b + eps)
+
+    # mass_floor = 1e-4  #flooor to avoid div by 0 in entropic case --> commented bc it did'nt solve the warnings
+
+    # a_safe = np.maximum(a, mass_floor)
+    # b_safe = np.maximum(b, mass_floor)
+
+    # f_plus = weighted_sum_plus / (a_safe + eps)
+    # f_minus = weighted_sum_minus / (b_safe + eps)
+
 
     return f_plus, f_minus

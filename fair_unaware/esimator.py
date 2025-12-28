@@ -10,13 +10,16 @@ from .models import (
     fit_eta_model,
     fit_s_classifier,
     compute_delta_from_posteriors,
+    EntropicKernelRegressor,
 )
-from .ot_barycenter import (
+from .ot.barycenter import (
     build_plus_minus_measures,
     compute_cost_matrix,
     solve_ot_plan,
     compute_barycentric_predictions_from_plan,
 )
+
+
 
 
 class UnawareFairRegressor:
@@ -52,6 +55,9 @@ class UnawareFairRegressor:
         fair_regressor=None,
         delta_tol=1e-6,
         sinkhorn_reg=None,
+        continuous_map="rf",
+        continuous_epsilon=0.05,
+        continuous_knn=None,
         random_state=0,
         verbose=False,
         store_diagnostics=False,
@@ -79,6 +85,9 @@ class UnawareFairRegressor:
         self.fair_regressor = fair_regressor
         self.delta_tol = delta_tol
         self.sinkhorn_reg = sinkhorn_reg
+        self.continuous_map = continuous_map
+        self.continuous_epsilon = continuous_epsilon
+        self.continuous_knn = continuous_knn
         self.random_state = random_state
         self.verbose = verbose
         self.store_diagnostics = store_diagnostics
@@ -114,88 +123,94 @@ class UnawareFairRegressor:
         self.f_plus_ = None
         self.f_minus_ = None
 
-
-    def fit(self, X, S, y):
+    def fit(self, X_train, S_train, y_train, X_unlab=None, group_priors=None):
         """
-        Fit the unawareness fair regressor.
+        Fit the unawareness fair regressor using the FairReg-style protocol:
+
+        - Fit η and P(S|X) on the labeled training set (X_train, S_train, y_train)
+        - Build the OT/barycenter correction on X_unlab (unlabeled features only)
+        - Fit the final (η, Δ) -> f regressor on that unlabeled/correction sample
 
         Parameters
         ----------
-        X : array-like of shape (n_samples, n_features)
-        S : array-like of shape (n_samples,)
-            Sensitive attribute with exactly 2 distinct values.
-        y : array-like of shape (n_samples,)
+        X_train : (n_train, n_features)
+        S_train : (n_train,)
+        y_train : (n_train,)
+        X_unlab : (n_unlab, n_features) or None
+            If None, falls back to using X_train (backward compatible).
+        group_priors : dict or None
+            Optional mapping {label -> P(S=label)}. If None, estimated from S_train.
 
         Returns
         -------
         self
         """
-        X = np.asarray(X)
-        S = np.asarray(S)
-        y = np.asarray(y)
-        n_samples = X.shape[0]
+        X_train = np.asarray(X_train)
+        S_train = np.asarray(S_train)
+        y_train = np.asarray(y_train)
 
-        
-        #for the PLOTS
-        self.X_ = X
-        self.S_ = S
- 
+        if X_unlab is None:
+            X_fair = X_train
+        else:
+            X_fair = np.asarray(X_unlab)
 
+        n_train = X_train.shape[0]
 
-        if S.shape[0] != n_samples or y.shape[0] != n_samples:
-            raise ValueError("X, S, y must have the same number of samples.")
-        
-        ###STEPS fllowing the step to have the pluggin f and then predict  
+        # store labeled training set (onlyfor diagnostics/plots)
+        self.X_ = X_train
+        self.S_ = S_train
 
-        # 1. Check binary groups and priors
-        self.group_labels_ = check_binary_groups(S)
-        self.group_priors_ = compute_group_priors(S)
+        if S_train.shape[0] != n_train or y_train.shape[0] != n_train:
+            raise ValueError("X_train, S_train, y_train must have the same number of samples.")
 
-        # 2.Fit eta(X)
-        t0= time.perf_counter()
-        self.base_regressor_, eta_hat = fit_eta_model(
-            X, y, model=self.base_regressor, random_state=self.random_state
+        # 1) Check binary groups and priors
+        self.group_labels_ = check_binary_groups(S_train)
+        self.group_priors_ = group_priors if group_priors is not None else compute_group_priors(S_train)
+
+        # 2) Fit eta(X) on TRAIN only
+        t0 = time.perf_counter()
+        self.base_regressor_, _ = fit_eta_model(
+            X_train, y_train, model=self.base_regressor, random_state=self.random_state
         )
         self.timings_["base_model_fit"] = time.perf_counter() - t0
-
         if self.verbose:
-            print("[fit] Fitted base regressor for eta.")
+            print("[fit] Fitted base regressor for eta on train.")
 
-        #3. Fit classifier for P(S | X)
-        t0= time.perf_counter()
-        self.base_classifier_, proba = fit_s_classifier(
-            X, S, clf=self.base_classifier, random_state=self.random_state
+        # 3) Fit classifier P(S|X) on TRAIN only
+        t0 = time.perf_counter()
+        self.base_classifier_, _ = fit_s_classifier(
+            X_train, S_train, clf=self.base_classifier, random_state=self.random_state
         )
         self.classes_ = self.base_classifier_.classes_
-        if self.verbose:
-            print("[fit] Fitted classifier for P(S|X). Classes:", self.classes_)
         self.timings_["s_classifier_fit"] = time.perf_counter() - t0
-
-        # 4. Compute Δ
-        t0= time.perf_counter()
-        delta_hat = compute_delta_from_posteriors(
-            proba, self.classes_, self.group_priors_
-        )
         if self.verbose:
-            print("[fit] Computed delta from posteriors.")
+            print("[fit] Fitted classifier for P(S|X) on train. Classes:", self.classes_)
 
+        # 4) Compute (eta_hat, delta_hat) on FAIRNESS/CALIBRATION sample X_fair (X_unlab)
+        t0 = time.perf_counter()
+        eta_hat_fair = self.base_regressor_.predict(X_fair)
+        proba_fair = self.base_classifier_.predict_proba(X_fair)
+        delta_hat_fair = compute_delta_from_posteriors(
+            proba_fair, self.classes_, self.group_priors_
+        )
         self.timings_["delta_computation"] = time.perf_counter() - t0
+        if self.verbose:
+            print("[fit] Computed eta and delta on X_unlab (or X_train if X_unlab=None).")
 
-        self.eta_hat_ = eta_hat
-        self.delta_hat_ = delta_hat
+        self.eta_hat_ = eta_hat_fair
+        self.delta_hat_ = delta_hat_fair
 
-        # 5. Build μ⁺, μ⁻
-        t0= time.perf_counter()
+        # 5) Build μ⁺, μ⁻ on X_fair
+        t0 = time.perf_counter()
         measures = build_plus_minus_measures(
-            eta_hat, delta_hat, delta_tol=self.delta_tol
+            eta_hat_fair, delta_hat_fair, delta_tol=self.delta_tol
         )
         plus_idx = measures["plus_idx"]
         minus_idx = measures["minus_idx"]
         a = measures["a"]
         b = measures["b"]
         self.timings_["measures_construction"] = time.perf_counter() - t0
-        
-        #keep the variables for the plots (plots only )
+
         if self.store_diagnostics:
             self.plus_idx_ = plus_idx
             self.minus_idx_ = minus_idx
@@ -206,89 +221,92 @@ class UnawareFairRegressor:
             self.d_minus_ = measures["d_minus"]
             self.b_ = b
 
-
+        # small check in case OT cannot be built 
         if a is None or b is None or len(plus_idx) == 0 or len(minus_idx) == 0:
             warnings.warn(
-                "Could not build both μ⁺ and μ⁻ (too few points with "
-                "positive/negative Δ). Falling back to unconstrained regressor."
+                "Could not build both μ⁺ and μ⁻ (too few points with positive/negative Δ). "
+                "Falling back to unconstrained regressor."
             )
-            #if we don't have the same l sun and minus indices fairness step is effectively skipped; we just use eta as f.
             self.fair_regressor_ = None
-            self.fair_predictions_ = eta_hat.copy()
+            self.fair_predictions_ = eta_hat_fair.copy()
             self.fairness_active_ = False
             return self
-
-        if self.verbose:
-            print(
-                f"[fit] Built measures μ⁺ (n={len(plus_idx)}) and "
-                f"μ⁻ (n={len(minus_idx)})."
-            )
 
         h_plus, d_plus = measures["h_plus"], measures["d_plus"]
         h_minus, d_minus = measures["h_minus"], measures["d_minus"]
 
-        # 6. compute OT cost matrix and solve OT
-        t0= time.perf_counter()
+        # 6) OT plan on X_fair
+        t0 = time.perf_counter()
         C = compute_cost_matrix(h_plus, d_plus, h_minus, d_minus)
-        if self.verbose:
-            print("[fit] Computed OT cost matrix with shape", C.shape)
         self.timings_["cost_matrix_computation"] = time.perf_counter() - t0
+        if self.verbose:
+            print("[fit] Computed OT cost matrix:", C.shape)
 
-        t0= time.perf_counter()
-
+        t0 = time.perf_counter()
         pi = solve_ot_plan(a, b, C, sinkhorn_reg=self.sinkhorn_reg)
+        self.timings_["ot_plan_solution"] = time.perf_counter() - t0
         if self.verbose:
             print("[fit] Solved OT plan.")
-        self.timings_["ot_plan_solution"] = time.perf_counter() - t0
-
 
         if self.store_diagnostics:
             self.C_ = C
             self.pi_ = pi
 
-
-        # 7. compute barycentric predictions at μ⁺, μ⁻ supports
-        t0= time.perf_counter()
+        # 7) Barycentric predictions at supports
+        t0 = time.perf_counter()
         f_plus, f_minus = compute_barycentric_predictions_from_plan(
             pi, h_plus, d_plus, h_minus, d_minus, a, b
         )
-        if self.verbose:
-            print("[fit] Computed barycentric predictions at supports.")
-
         self.timings_["barycentric_predictions"] = time.perf_counter() - t0
+        if self.verbose:
+            print("[fit] Computed barycentric predictions.")
 
         if self.store_diagnostics:
             self.f_plus_ = f_plus
             self.f_minus_ = f_minus
 
-
-        # 8. fuild full target vector f_target for all samples
-
-        f_target = eta_hat.copy()
+        # 8) Build f_target on X_fair
+        f_target = eta_hat_fair.copy()
         f_target[plus_idx] = f_plus
         f_target[minus_idx] = f_minus
 
-        # 9.fit final 2D regressor on (eta, delta) -> f_target
-        t0= time.perf_counter()
-        Z = np.column_stack([eta_hat, delta_hat])
-        if self.fair_regressor is None:
+        # 9) Fit final 2D regressor (eta, delta) -> f_target on X_fair
+        t0 = time.perf_counter()
+        Z = np.column_stack([eta_hat_fair, delta_hat_fair])
+
+        # NEW: choose continuous mapping
+        if self.fair_regressor is not None:
+            # user-provided regressor overrides everything
+            self.fair_regressor_ = self.fair_regressor
+
+        elif self.continuous_map == "rf":
             self.fair_regressor_ = RandomForestRegressor(
                 n_estimators=200,
                 random_state=self.random_state,
             )
+
+        elif self.continuous_map == "entropic":
+            self.fair_regressor_ = EntropicKernelRegressor(
+                epsilon=self.continuous_epsilon,
+                knn=self.continuous_knn,
+            )
+
         else:
-            self.fair_regressor_ = self.fair_regressor
+            raise ValueError(
+                f"Unknown continuous_map={self.continuous_map!r}. Expected 'rf' or 'entropic'."
+            )
 
         self.fair_regressor_.fit(Z, f_target)
         self.fair_predictions_ = f_target
         self.fairness_active_ = True
+        self.timings_["fair_regressor_fit"] = time.perf_counter() - t0
 
         if self.verbose:
             print("[fit] Fitted final 2D fair regressor on (eta, delta).")
-        self.timings_["fair_regressor_fit"] = time.perf_counter() - t0
 
         return self
-
+    
+    
     def predict(self, X):
         """
         Predict with the fair regressor.

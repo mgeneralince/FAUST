@@ -1,129 +1,95 @@
 import os
-import sys
 import argparse
+from pathlib import Path
 
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
 
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 
 from fair_unaware import UnawareFairRegressor
+from sklearn.model_selection import train_test_split
+
 from fair_unaware.diagnostics import plot_basic_diagnostics
+from fair_unaware.metrics import dp_mean_gap   
+from data.synthetic import make_synthetic_dataset
 
 
-os.makedirs("notes/figs", exist_ok=True)
+def main(method="OT", nb_samples=1000, *, out_dir="notes/figs", prefix="example",
+         save_suffix="pdf", show=False, with_ot_matrices=False,
+         cont_map="rf", cont_epsilon=0.05, cont_knn=None):
 
-def make_synthetic_dataset(n=1000, random_state=0):
-    """
-    Simple synthetic dataset:
-    - S ~ Bernoulli(0.5)
-    - X1 ~ N(S, 1), X2 ~ N(0, 1)
-    - Y = 2*X1 + S + noise
-
-    Groups have different conditional distributions of Y and X, so
-    unconstrained predictions will typically not satisfy DP.
-    """
-    rng = np.random.RandomState(random_state)
-    S = rng.binomial(1, 0.5, size=n)
-
-    X1 = rng.normal(loc=S, scale=1.0, size=n)
-    X2 = rng.normal(loc=0.0, scale=1.0, size=n)
-    X = np.column_stack([X1, X2])
-
-    noise = rng.normal(scale=0.5, size=n)
-    Y = 2.0 * X1 + S + noise
-
-    return X, S, Y
-
-
-def main(method="OT", nb_samples=1000):
     X, S, Y = make_synthetic_dataset(n=nb_samples, random_state=42)
+
+    X_tr, X_te, S_tr, S_te, Y_tr, Y_te = train_test_split(
+        X, S, Y,
+        test_size=0.3,
+        random_state=42,
+        stratify=S
+    )
 
     #unconstrained regressor 
     base_reg = RandomForestRegressor(n_estimators=200, random_state=42)
-    base_reg.fit(X, Y)
-    y_pred_base = base_reg.predict(X)
+    base_reg.fit(X_tr, Y_tr)
+    y_pred_base = base_reg.predict(X_te)
 
-    #simple DP stats: mean prediction per group
-    base_mean_0 = y_pred_base[S == 0].mean()
-    base_mean_1 = y_pred_base[S == 1].mean()
+    mse_base = np.mean((y_pred_base - Y_te) ** 2)
+    dp_base = dp_mean_gap(y_pred_base, S_te)
+
 
     print("=== Unconstrained regressor ===")
-    print(f"Mean prediction for S=0: {base_mean_0:.3f}")
-    print(f"Mean prediction for S=1: {base_mean_1:.3f}")
-    print(f"Difference in means: {abs(base_mean_0 - base_mean_1):.3f}")
-    print()
+    print(f"MSE      : {mse_base:.3f}")
+    print(f"DP gap   : {dp_base:.3f}")
 
     # Unawareness fair regressor
-    if method == "OT":
-        sinkhorn_reg = None
-        fair_model = UnawareFairRegressor(
-            base_regressor=None,     # RF for eta
-            base_classifier=None,    # RF for P(S|X)
-            fair_regressor=None,     # RF on (eta, delta)
-            delta_tol=1e-6,
-            sinkhorn_reg=sinkhorn_reg,    
-            random_state=42,
-            verbose=True,
-            store_diagnostics=True,  #ofr the PLOTS
-        )
-    elif method == "Sinkhorn":
-        sinkhorn_reg = 0.05
-        fair_model = UnawareFairRegressor(
-            base_regressor=None,     
-            base_classifier=None,    
-            fair_regressor=None,     
-            delta_tol=1e-6,
-            sinkhorn_reg=sinkhorn_reg,      
-            random_state=42,
-            verbose=True,
-            store_diagnostics=True,  
-        )
+    if method not in {"OT", "Sinkhorn"}:
+        raise ValueError(f"Unknown method: {method}")
+    sinkhorn_reg = None if method == "OT" else 0.05
+    fair_model = UnawareFairRegressor(
+        base_regressor=None,
+        base_classifier=None,
+        fair_regressor=None,  #None== continuous_map decides
+
+        continuous_map=cont_map,
+        continuous_epsilon=cont_epsilon,
+        continuous_knn=cont_knn,
+
+        delta_tol=1e-6,
+        sinkhorn_reg=sinkhorn_reg,
+        random_state=42,
+        verbose=True,
+        store_diagnostics=True,
+    )
 
 
-    fair_model.fit(X, S, Y)
-    y_pred_fair = fair_model.predict(X)
+    fair_model.fit(X_tr, S_tr, Y_tr)
+    y_pred_fair = fair_model.predict(X_te)
 
-    fair_mean_0 = y_pred_fair[S == 0].mean()
-    fair_mean_1 = y_pred_fair[S == 1].mean()
+    mse_fair = np.mean((y_pred_fair - Y_te) ** 2)
+    dp_fair = dp_mean_gap(y_pred_fair, S_te)
 
     print("\n=== Unawareness fair regressor ===")
-    print(f"Mean prediction for S=0: {fair_mean_0:.3f}")
-    print(f"Mean prediction for S=1: {fair_mean_1:.3f}")
-    print(f"Difference in means: {abs(fair_mean_0 - fair_mean_1):.3f}")
-
-    #MSE
-    mse_base = np.mean((y_pred_base - Y) ** 2)
-    mse_fair = np.mean((y_pred_fair - Y) ** 2)
-    print(f"\nMSE (base) : {mse_base:.3f}")
-    print(f"MSE (fair) : {mse_fair:.3f}")
+    print(f"MSE      : {mse_fair:.3f}")
+    print(f"DP gap   : {dp_fair:.3f}")
 
         #generate basicplots (with_ot_matrices= matrices non agrégées mais on voit rien) 
-    if method == "OT":
-        print("\nGenerating diagnostic plots (including OT internals)...")
-        plot_basic_diagnostics(
-            fair_model,
-            X,
-            S,
-            Y,
-            show=False,
-            save_prefix=f"notes/figs/{method}/{args.nb_samples}/example",
-            with_ot_matrices=True,   
-            save_suffix="pdf"
-        )
-    elif method == "Sinkhorn":
-        print("\nGenerating diagnostic plots (including Sinkhorn internals)...")
-        plot_basic_diagnostics(
-            fair_model,
-            X,
-            S,
-            Y,
-            show=True,
-            save_prefix=f"notes/figs/{method}/{args.nb_samples}/example",
-            with_ot_matrices=True,  
-        )
+    print("\nGenerating diagnostic plots (including OT internals)...")
+    fig_root = Path(out_dir)
+    run_dir = fig_root / method / f"{cont_map}" / str(nb_samples)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    save_prefix = run_dir / prefix
+
+
+    plot_basic_diagnostics(
+        fair_model,
+        X_te,
+        S_te,
+        Y_te,
+        show=show,
+        save_prefix=str(save_prefix),
+        with_ot_matrices=with_ot_matrices,
+        save_suffix=save_suffix,
+        save_transport=True,
+    )
     
     #store timings 
     print("Timing breakdown (in seconds):")
@@ -138,6 +104,27 @@ if __name__ == "__main__":
                         help="Choose the method for fair regression: 'OT' for Optimal Transport, 'Sinkhorn' for Sinkhorn regularization.")
     parser.add_argument("--nb_samples", type=int, default=1000,
                         help="Number of samples in the synthetic dataset.")
+    parser.add_argument("--out_dir", default="notes/figs")   
+    parser.add_argument("--prefix", default="example")       
+    parser.add_argument("--save_suffix", default="pdf")
+    parser.add_argument("--show", action="store_true")
+    parser.add_argument("--with_ot_matrices", action="store_true", default=True)
+    parser.add_argument("--cont_map", choices=["rf", "entropic"], default="rf")
+    parser.add_argument("--cont_epsilon", type=float, default=0.05)
+    parser.add_argument("--cont_knn", type=int, default=None)
+
     args = parser.parse_args()
-    os.makedirs(f"notes/figs/{args.method}/{args.nb_samples}", exist_ok=True)
-    main(method=args.method, nb_samples=args.nb_samples)
+
+    main(
+    method=args.method,
+    nb_samples=args.nb_samples,
+    out_dir=args.out_dir,
+    prefix=args.prefix,
+    save_suffix=args.save_suffix,
+    show=args.show,
+    with_ot_matrices=args.with_ot_matrices,
+    cont_map=args.cont_map,
+    cont_epsilon=args.cont_epsilon,
+    cont_knn=args.cont_knn,
+)
+

@@ -1,3 +1,3 @@
-from .predictor import UnawareFairRegressor
+from .esimator import UnawareFairRegressor
 
 __all__ = ["UnawareFairRegressor"]

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.colors import LogNorm
 from scipy.stats import gaussian_kde
-
+import math
 
 
 def plot_eta_delta_scatter(eta, delta, S, ax=None, title="(eta, delta) scatter"):
@@ -27,6 +27,92 @@ def plot_eta_delta_scatter(eta, delta, S, ax=None, title="(eta, delta) scatter")
     ax.set_title(title)
     ax.legend()
     return ax
+
+
+def scatter_XY_colored_by_S(
+    X, Y, S,
+    axes=None,
+    title_prefix="X vs Y",
+    sharey=True,
+    max_cols=4,
+    col_width=4.0,
+    row_height=3.5,
+    alpha=0.5,
+    s=8,                
+    legend="single",     
+    rasterized=True,
+):
+    """
+    Grid scatter plots: for each column j of X, plot X[:, j] vs Y, colored by S.
+
+    If axes is None, creates a grid with up to max_cols columns and enough rows.
+    """
+
+    X = np.asarray(X)
+    Y = np.asarray(Y)
+    S = np.asarray(S)
+
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+
+    n, d = X.shape
+    if not (len(Y) == n and len(S) == n):
+        raise ValueError(f"Length mismatch: X has n={n}, len(Y)={len(Y)}, len(S)={len(S)}")
+
+    # --- create axes grid if needed ---
+    if axes is None:
+        ncols = min(max_cols, d)
+        nrows = int(math.ceil(d / ncols))
+        fig, axes = plt.subplots(
+            nrows, ncols,
+            figsize=(col_width * ncols, row_height * nrows),
+            sharey=sharey
+        )
+    else:
+        # accept 1D/2D arrays or lists
+        axes = np.array(axes, dtype=object)
+        fig = axes.ravel()[0].figure
+
+    axes = np.array(axes, dtype=object).ravel()
+
+    groups = np.unique(S)
+    legend_handles = None
+
+    for j in range(d):
+        ax = axes[j]
+        for g in groups:
+            mask = (S == g)
+            sc = ax.scatter(
+                X[mask, j], Y[mask],
+                label=f"S={g}",
+                alpha=alpha, s=s,
+                rasterized=rasterized
+            )
+        ax.set_xlabel(f"X[:, {j}]")
+        if sharey and j % (min(max_cols, d)) == 0:
+            ax.set_ylabel("Y")
+        ax.set_title(f"{title_prefix} (col {j})", fontsize=10)
+
+        if legend == "each":
+            ax.legend()
+
+        if legend == "single" and legend_handles is None:
+            legend_handles, legend_labels = ax.get_legend_handles_labels()
+
+    #turn off unused axes to avoid empty plots
+    for k in range(d, len(axes)):
+        axes[k].axis("off")
+
+    #single shared legend
+    if legend == "single" and legend_handles is not None:
+        fig.legend(
+            legend_handles, legend_labels,
+            loc="upper center", ncol=min(len(groups), 5),
+            frameon=False
+        )
+
+    fig.tight_layout(rect=(0, 0, 1, 0.95) if legend == "single" else None)
+    return fig, axes
 
 
 #not every link, only those with significant mass
@@ -997,6 +1083,87 @@ def plot_binned_cost_by_eta(
     ax.set_xlabel("eta-bin (minus side)")
     ax.set_ylabel("eta-bin (plus side)")
     return ax
+
+
+def plot_ordering_metrics_bars(order_by_group, ax=None, metric="kendall_tau", title=None):
+    """
+    Barplot for one ordering metric across groups (+ overall).
+    order_by_group: dict from rank_metrics_by_group(...)
+    metric in {"kendall_tau","spearman","mean_abs_rank_disp","topk_jaccard"}
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    labels = list(order_by_group.keys())
+    values = [order_by_group[k].get(metric, np.nan) for k in labels]
+
+    ax.bar(labels, values)
+    ax.set_xlabel("Group")
+    ax.set_ylabel(metric)
+
+    if metric in ("kendall_tau", "spearman"):
+        ax.set_ylim(-1, 1)
+        ax.axhline(0, linewidth=1)
+    else:
+        ax.set_ylim(0, 1)
+
+    ax.set_xticklabels(labels, rotation=45, ha="right")
+
+    if title is None:
+        title = f"Ordering metric: {metric}"
+    ax.set_title(title)
+    return ax
+
+
+def plot_auc_report_bars(auc_rep, ax=None, title="AUC summary"):
+    """
+    Barplot of AUC numbers in auc_rep (dict from auc_report).
+    """
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    labels = list(auc_rep.keys())
+    values = [auc_rep[k] for k in labels]
+
+    ax.bar(labels, values)
+    ax.set_ylim(0, 1)
+    ax.set_ylabel("AUC")
+    ax.set_title(title)
+    ax.set_xticklabels(labels, rotation=45, ha="right")
+    return ax
+
+
+def plot_gamma_sweep(rows, save_path=None):
+    gam = [r["gamma"] for r in rows]
+    mse_b = [r["mse_base"] for r in rows]
+    mse_f = [r["mse_fair"] for r in rows]
+    dp_b  = [r["dp_base"] for r in rows]
+    dp_f  = [r["dp_fair"] for r in rows]
+
+    # side-by-side subplots
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharex=True)
+
+    axes[0].plot(gam, mse_b, marker="o", label="base")
+    axes[0].plot(gam, mse_f, marker="o", label="fair")
+    axes[0].set_xlabel("gamma (X separability by S)")
+    axes[0].set_ylabel("MSE")
+    axes[0].legend()
+    axes[0].set_title("MSE vs gamma")
+
+    axes[1].plot(gam, dp_b, marker="o", label="base")
+    axes[1].plot(gam, dp_f, marker="o", label="fair")
+    axes[1].set_xlabel("gamma (X separability by S)")
+    axes[1].set_ylabel(r"$|\mathbb{E}[\hat y|S=0]-\mathbb{E}[\hat y|S=1]|$")
+    axes[1].legend()
+    axes[1].set_title("Unfairness (DP mean gap) vs gamma")
+
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, bbox_inches="tight")
+        plt.close(fig)
+    return fig
+
+
 
 
 
