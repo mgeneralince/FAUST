@@ -12,8 +12,10 @@ venv/
 .env
 
 
+
 #os
 .DS_Store
+**/.DS_Store
 Thumbs.db
 .idea/
 .vscode/
@@ -39,8 +41,14 @@ Thumbs.db
 
 
 #generated figs
-notes/figs/
 results/
+notes/figs/*
+
+#keep paper figures
+!notes/figs/paper/
+!notes/figs/paper/**
+notes/figs/paper/**/.DS_Store
+
 
 
 # Jupyter / data outputs
