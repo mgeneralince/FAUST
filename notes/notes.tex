@@ -55,22 +55,38 @@ Data $(X,S,Y)\in\X\times\Sset\times\R$; $S\in\{1,\dots,K\}$.
 \begin{figure}[h]
   \centering
     \centering
-    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_base_pred_dists.pdf}
-
+    \includegraphics[width=0.7\linewidth]{figs/paper/OT/rf/10000/example_base_pred_dists.pdf}
+    \caption{Distributions of $\eta(X)$ in each group (colors) and overall (black).}
 \end{figure}
 
 \begin{figure}[h]
   \centering
     \centering
-    \includegraphics[width=\linewidth]{figs/OT/1500/new_scatter_XY_colored_by_S.pdf}
+    \includegraphics[width=\linewidth]{figs/paper/OT/rf/10000/example_scatter_XY_colored_by_S.pdf}
+    \caption{Scatter Y as a function of each column of X (left) on train (right) on test.}
 \end{figure}
+
+\begin{figure}
+  \centering
+    \centering
+    \includegraphics[width=\linewidth]{figs/paper/confounded/rf/scatter_XY_by_gamma/scatter_XY_gamma0p00_beta1.0.pdf}
+    \caption{Scatter Y as a function of X ($\gamma=0$ ) .}
+\end{figure}
+
+\begin{figure}
+  \centering
+    \centering
+    \includegraphics[width=\linewidth]{figs/paper/confounded/rf/scatter_XY_by_gamma/scatter_XY_gamma5p00_beta1.0.pdf}
+    \caption{Scatter Y as a function of X ($\gamma=5$ ) .}
+\end{figure}
+
 
 \section{DP}
 \textbf{DP for regression (unawareness):} $f(X)\perp S$,
 i.e.\ $f_{\push}\mu_s$ is the same for all $s$.
-\begin{equation*}
+\begin{equation}
 \min_{f:\X\to\R}\ \E[(Y-f(X))^2]\quad\text{s.t.}\quad f(X)\perp S.
-\end{equation*}
+\end{equation}
 \emph{Order preservation (within group):} if $\eta(X)<\eta(X')$ and $S=S'$, then $f(X)<f(X')$ a.s.
 
 \medskip
@@ -78,18 +94,18 @@ i.e.\ $f_{\push}\mu_s$ is the same for all $s$.
 
 \section{Two groups $\Rightarrow$ reduce to ``excess-mass'' pieces}
 Let $\alpha:=\mu_1-\mu_2$ (\emph{signed} measure). Jordan decomposition $\alpha=\alpha^+-\alpha^-$ with equal mass $m:=\alpha^+(\X)=\alpha^-(\X)=\tfrac12\|\mu_1-\mu_2\|_{\TV}$.
-\begin{equation*}
+\begin{equation}
 \mu_+:=\alpha^+/m,\qquad \mu_-:=\alpha^-/m.
-\end{equation*}
+\end{equation}
 Supports split $\X$ into $\X_+$ (where group 1 dominates), $\X_-$ (group 2 dominates), and the tie region $\X_=$.
-\begin{equation*}
+\begin{equation}
 \boxed{~f\ \text{is DP} \iff (f_{\push}\mu_+)=(f_{\push}\mu_-)~}
-\end{equation*}
+\end{equation}
 (\emph{So DP is governed by how $f$ acts on the disagreement regions; $\X_=$ is irrelevant to DP}.)
 
 \section*{3. The 2D lift and the OT cost (this is the main trick)}
 Pick a reference $\mu$ dominating $\mu_\pm$. Define the \emph{signed density gap}
-\begin{equation*}
+\begin{equation}
 \Delta(x):=\begin{cases}
 \dfrac{\dd\mu_+}{\dd\mu}(x), & x\in\X_+,\\[4pt]
 -\dfrac{\dd\mu_-}{\dd\mu}(x), & x\in\X_-,\\
@@ -97,76 +113,84 @@ Pick a reference $\mu$ dominating $\mu_\pm$. Define the \emph{signed density gap
 \end{cases}
 \qquad\text{and note}\quad
 \dd\mu=\frac{1}{|\Delta|}\dd\mu_\pm\ \text{on }\X_\pm.
-\end{equation*}
+\end{equation}
 Lift $x\mapsto x^{\uparrow}:=(\eta(x),\Delta(x))=(h,d)\in\Omega:=\{(h,d)\in\R^2:\,d\neq 0\}$.
 Let $\mu_\pm^{\uparrow}$ be the laws of $x^\uparrow$ under $\mu_\pm$.
 
 \begin{figure}[h]
-  \centering
     \centering
-    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_eta_delta.pdf}
+    \includegraphics[width=\linewidth]{figs/paper/OT/rf/10000/example_eta_delta_scatter.pdf}
+  \caption{Scatter of $(\eta,\Delta)$ on train (left) and test (right).}
 \end{figure}
 
 \medskip
 \textbf{Cost (multi$\to$one):}\quad $c((h,d),y)=\dfrac{(h-y)^2}{|d|}$.
 
 \section*{4. Barycenter program }
-\begin{equation*}
+\begin{equation}
 \boxed{~\min_{\nu\in\mathcal P(\R)}\ \OT_c(\mu_+^{\uparrow},\nu)+\OT_c(\mu_-^{\uparrow},\nu)~}
-\end{equation*}
+\end{equation}
 This equals the optimal \emph{excess} risk among DP regressors (first reduce risk to $\E[(\eta-f)^2]$, then use $\dd\mu=\dd\mu_\pm/|\Delta|$ on $\X_\pm$).
 
 \section{Collapse to a standard 2-marginal OT}
 For fixed $(x_1,x_2)$ with $x_i=(h_i,d_i)$,
-\begin{equation*}
+\begin{equation}
 \min_y\ \frac{(h_1-y)^2}{|d_1|}+\frac{(h_2-y)^2}{|d_2|}
 \quad\Rightarrow\quad
 y^\star=\frac{\frac{h_1}{|d_1|}+\frac{h_2}{|d_2|}}{\frac{1}{|d_1|}+\frac{1}{|d_2|}},
-\end{equation*}
+\end{equation}
 and minimum value
-\begin{equation*}
+\begin{equation}
 \boxed{~C((h_1,d_1),(h_2,d_2))=\frac{(h_2-h_1)^2}{|d_1|+|d_2|}~}.
-\end{equation*}
+\end{equation}
 Hence
-\begin{equation*}
+\begin{equation}
 \min_{\nu}\ \OT_c(\mu_+^{\uparrow},\nu)+\OT_c(\mu_-^{\uparrow},\nu)
 \;=\;\OT_{C}(\mu_+^{\uparrow},\mu_-^{\uparrow}).
-\end{equation*}
+\end{equation}
 
 \begin{figure}[h]
   \centering
     \centering
-    \includegraphics[width=\linewidth]{figs/OT/1500/example_ot_matrices_full.png}
+    \includegraphics[width=\linewidth]{figs/paper/OT/rf/10000/transport/example_ot_matrices_full.pdf}
+    \caption{OT matrix between $\mu_+^{\uparrow}$ and $\mu_-^{\uparrow}$.}
 \end{figure}
 
 \begin{figure}[h]
   \centering
     \centering
-    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_agg_plan_eta.pdf}
-\end{figure}
+    \includegraphics[width=0.7\linewidth]{figs/paper/OT/rf/10000/example_agg_plan_eta.pdf}
+    \caption{Aggregated OT plan projected on the $\eta$-axis.}
+    \end{figure}
 
+    \begin{figure}[h]
+      \centering
+      \begin{minipage}[t]{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/OT/rf/10000/example_eta_delta_transport_lines.pdf}
+        \small OT transport plan from $\mu_+^{\uparrow}$ to $\mu_-^{\uparrow}$ (top 30\% largest moves; max 150 links).
+      \end{minipage}\hfill
+      \begin{minipage}[t]{0.49\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/OT/rf/10000/example_barycenter_links.pdf}
+        \small Barycenter links from $(\eta,\Delta)$ to the fair prediction (top 30\% largest moves; max 150 links).
+      \end{minipage}
+      \caption{OT transport plan (left) VS barycenter links (right).}
+    \end{figure}
 
-\begin{figure}[h]
-  \centering
-  \begin{minipage}[t]{0.48\linewidth}
+  \begin{figure}[h]
     \centering
-    \includegraphics[width=\linewidth]{figs/OT/1500/example_eta_delta_transport_lines.pdf}
-    \small Transport lines from $(\eta,\Delta)$ to the fair prediction (top 30\% largest moves; max 150 lines).
-  \end{minipage}\hfill
-  \begin{minipage}[t]{0.48\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{figs/OT/1500/example_barycenter_links.pdf}
-    \small Barycenter links from $(\eta,\Delta)$ to the fair prediction (top 30\% largest moves; max 150 links).
-  \end{minipage}
-\end{figure}
-
-\begin{figure}
-  \centering
-    \centering
-    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_eta_delta_colored_by_Y.pdf}
-
-\end{figure}
-
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{figs/paper/OT/rf/10000/example_eta_delta_colored_by_Y.pdf}
+      \caption{Train on the left test on the right}
+    \end{minipage}\hfill
+    \begin{minipage}[t]{0.49\linewidth}
+      \centering
+      \includegraphics[width=\linewidth]{figs/paper/OT/rf/10000/example_pred_dists.pdf}
+      \caption{Distributions before and after correction in each group.}
+    \end{minipage}
+  \end{figure}
 
 
 
@@ -182,14 +206,14 @@ Under this and $\E[Y^2]<\infty$:
 \end{itemize}
 Let $\varphi$ be a $C$-convex Kantorovich potential for $\OT_C(\mu_+^{\uparrow},\mu_-^{\uparrow})$.
 Where $\partial_h\varphi(h,d)$ exists,
-\begin{equation*}
+\begin{equation}
   \boxed{~f_+(h,d)=h-\frac{|d|}{2}\,\partial_h\varphi(h,d)~}\qquad
 (\text{and symmetrically } f_-).
-\end{equation*}
+\end{equation}
 
 
 \section*{7. Final form of the optimal fair regressor}
-\begin{equation*}
+\begin{equation}
   f^\star(x)=
 \begin{cases}
 f_+\big(\eta(x),\Delta(x)\big), & x\in\X_+,\\[4pt]
@@ -198,29 +222,21 @@ f_-\big(\eta(x),\Delta(x)\big), & x\in\X_-,\\[4pt]
 \end{cases}
 \qquad\text{and}\qquad
 (f^\star)_{\push}\mu_+=(f^\star)_{\push}\mu_-=\nu^{\mathrm{bar}}.
-\end{equation*}
-
-
-\begin{figure}[h]
-  \centering
-    \centering
-    \includegraphics[width=0.7\linewidth]{figs/OT/1500/example_pred_dists.pdf}
-\end{figure}
-
+\end{equation}
 
 
 \section{ Nestedness (multi to one OT)}
 Setup: source $(X,\mu)\subset\R^m$, target $(Y,\nu)\subset\R$, cost $c(x,y)$ differentiable in $y$.
 Define sublevel sets using the \emph{marginal cost}
-\begin{equation*}
+\begin{equation}
 X_{\le}(y,k):=\{x\in\X:\,\partial_y c(x,y)\le k\}.
-\end{equation*}
+\end{equation}
 For each $y$, choose $k(y)$ so that $\mu\big(X_{\le}(y,k(y))\big)=F_\nu(y)$ where $F_\nu$ is the CDF of $\nu$.
 
 \textbf{Nestedness:}
-\begin{equation*}
+\begin{equation}
 y_1<y_2\ \Longrightarrow\ X_{\le}\!\big(y_1,k(y_1)\big)\subseteq X_{\le}\!\big(y_2,k(y_2)\big).
-\end{equation*}
+\end{equation}
 Consequence: existence of a Monge map $T:\X\to Y$ with
 $\partial_y c\big(x,T(x)\big)=k\big(T(x)\big)$ a.e.\ (no mass splitting).
 
@@ -263,13 +279,13 @@ $\partial_y c\big(x,T(x)\big)=k\big(T(x)\big)$ a.e.\ (no mass splitting).
   
 \section{Classification link (cost-sensitive, $Y\in\{0,1\}$)}
 For weight $y\in[0,1]$,
-\begin{equation*}
+\begin{equation}
 R_y(g)=y\,\Pp(Y=0,\,g(X)=1)+(1-y)\,\Pp(Y=1,\,g(X)=0),\quad g:\X\to\{0,1\}.
-\end{equation*}
+\end{equation}
 Under DP and a \emph{nestedness} condition, the optimal fair classifiers are \emph{thresholds} of $f^\star$:
-\begin{equation*}
+\begin{equation}
 g_y^\star(x)=\1\{\,f^\star(x)\ge t(y)\,\},
-\end{equation*}
+\end{equation}
 and the family $\{g_y^\star\}_y$ recovers $f^\star$ (up to null sets). Without nestedness this equivalence can fail.
 
 \section{Awareness VS unawareness }
@@ -286,6 +302,90 @@ and the family $\{g_y^\star\}_y$ recovers $f^\star$ (up to null sets). Without n
   \item Output $\hat f^\star$ piecewise on $(\X_+,\X_-,\X_=)$ as above.
 \end{enumerate}
 
+
+\section{How good is the method when the X by S are more or less confounded? }
+
+All confounded experiements are with $n=1500$
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=\linewidth]{figs/paper/confounded/rf/sweep_OT_n1500_beta1.0_100g.pdf}
+    \caption{Results for different gamma values (make sense bc when $\gamma=0$ fairness is free).}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[t]{0.51\linewidth}
+    \centering
+    \includegraphics[width=1.2\linewidth]{figs/paper/confounded/rf/scatter_XY_by_gamma/scatter_XY_gamma0p00_beta1.0.pdf}
+  \end{minipage}\hspace{0.01cm}
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=0.61\linewidth]{figs/paper/confounded/rf/eta_delta_by_gamma/eta_delta_gamma0p00_beta1.0.pdf}
+  \end{minipage}
+  \caption{Results at $\gamma=0$: scatter $(X,Y)$ vs. $(\eta,\Delta)$ side by side.}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[t]{0.51\linewidth}
+    \centering
+    \includegraphics[width=1.2\linewidth]{figs/paper/confounded/rf/scatter_XY_by_gamma/scatter_XY_gamma1p75_beta1.0.pdf}
+
+  \end{minipage}\hspace{0.01cm}
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=0.61\linewidth]{figs/paper/confounded/rf/eta_delta_by_gamma/eta_delta_gamma1p75_beta1.0.pdf}
+  \end{minipage}
+  \caption{Results at $\gamma=1.88$: scatter $(X,Y)$ vs. $(\eta,\Delta)$ side by side.}
+\end{figure}
+
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[t]{0.51\linewidth}
+    \centering
+    \includegraphics[width=1.2\linewidth]{figs/paper/confounded/rf/scatter_XY_by_gamma/scatter_XY_gamma2p78_beta1.0.pdf}
+
+  \end{minipage}\hspace{0.01cm}
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=0.61\linewidth]{figs/paper/confounded/rf/eta_delta_by_gamma/eta_delta_gamma2p78_beta1.0.pdf}
+  \end{minipage}
+  \caption{Results at $\gamma=2.50$: scatter $(X,Y)$ vs. $(\eta,\Delta)$ side by side.}
+\end{figure}
+
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[t]{0.51\linewidth}
+    \centering
+    \includegraphics[width=1.2\linewidth]{figs/paper/confounded/rf/scatter_XY_by_gamma/scatter_XY_gamma3p89_beta1.0.pdf}
+
+  \end{minipage}\hspace{0.01cm}
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=0.61\linewidth]{figs/paper/confounded/rf/eta_delta_by_gamma/eta_delta_gamma3p89_beta1.0.pdf}
+  \end{minipage}
+  \caption{Results at $\gamma=3.75$: scatter $(X,Y)$ vs. $(\eta,\Delta)$ side by side.}
+\end{figure}
+
+
+\begin{figure}[h]
+  \centering
+  \begin{minipage}[t]{0.51\linewidth}
+    \centering
+    \includegraphics[width=1.2\linewidth]{figs/paper/confounded/rf/scatter_XY_by_gamma/scatter_XY_gamma5p00_beta1.0.pdf}
+
+  \end{minipage}\hspace{0.01cm}
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=0.61\linewidth]{figs/paper/confounded/rf/eta_delta_by_gamma/eta_delta_gamma5p00_beta1.0.pdf}
+  \end{minipage}
+  \caption{Results at $\gamma=5.00$: scatter $(X,Y)$ vs. $(\eta,\Delta)$ side by side.}
+\end{figure}
+
 \section{defs}
 \begin{itemize}
   \item \textbf{DP:} $f(X)\perp S$ $\iff$ $f_{\push}\mu_s$ independent of $s$.
@@ -297,17 +397,17 @@ and the family $\{g_y^\star\}_y$ recovers $f^\star$ (up to null sets). Without n
 \end{itemize}
 
 \section{formuless}
-\begin{equation*}
+\begin{equation}
 \boxed{~c((h,d),y)=\frac{(h-y)^2}{|d|}~},\qquad
 \boxed{~C((h_1,d_1),(h_2,d_2))=\frac{(h_2-h_1)^2}{|d_1|+|d_2|}~},
-\end{equation*}
-\begin{equation*}
+\end{equation}
+\begin{equation}
 \boxed{~f^\star(x)=
 \begin{cases}
 \eta(x)-\dfrac{|\Delta(x)|}{2}\,\partial_h\varphi(\eta(x),\Delta(x)), & x\in\X_+\cup\X_-,\\[4pt]
 \eta(x), & x\in\X_=.
 \end{cases}~}.
-\end{equation*}
+\end{equation}
 
 \newpage
 
@@ -330,17 +430,17 @@ Data $(X,S,Y)\in \R^d \times [K]\times \R$ with unknown law $P$.
 
 \paragraph{Randomized predictors (unawareness).}
 A randomized prediction function is a Markov kernel
-\begin{equation*}
+\begin{equation}
 \pi: 
 \begin{cases}
   \mathcal{B}(\R)\times \R^d &\to [0,1],\\
   \qquad B&\mapsto \pi(B\mid x).
 \end{cases}
-\end{equation*}
+\end{equation}
 It induces a prediction random variable $\widehat Y_\pi$ by
-\begin{equation*}
+\begin{equation}
 Law(\widehat Y_\pi \mid X=x, S=s)=\pi(\cdot\mid x).
-\end{equation*}
+\end{equation}
 \textbf{Remark 2.1:} deterministic predictors correspond to Dirac kernels
 $\pi(\cdot\mid x)=\delta_{g(x)}$, giving $\widehat Y_\pi=g(X)$. Also, $\pi$ specifies the joint law
 of $(X,S,\widehat Y_\pi)$, and to relate it to $(X,S,Y)$ one may assume conditional independence
@@ -349,17 +449,17 @@ $\widehat Y_\pi \perp Y \mid (X,S)$ so that $(X,S,Y,\widehat Y_\pi)$ is well-def
 \section{Demographic parity and risk}
 \paragraph{DP.}
 A predictor $\pi$ satisfies demographic parity if
-\begin{equation*}
+\begin{equation}
 \widehat Y_\pi \perp S.
-\end{equation*}
+\end{equation}
 This is \emph{distributional}, not pointwise in $x$.
 
 \paragraph{Risk.}
 They measure performance against $\eta$ (excess risk):
-\begin{equation*}
+\begin{equation}
 R(\pi) := \E\big[(\widehat Y_\pi-\eta(X))^2\big]
         = \E\Big[\int_{\R} (\widehat y-\eta(X))^2\,\pi(d\widehat y\mid X)\Big].
-\end{equation*}
+\end{equation}
 
 \section{discretization of the prediction range}
 They force the predictor outputs to lie on a \textbf{fixed finite grid}.
@@ -369,24 +469,24 @@ Assume there exists $B>0$ such that $|\eta(X)|\le B$ a.s.
 
 \paragraph{Grid.}
 For an integer $L\ge 1$, define the uniform grid on $[-B,B]$
-\begin{equation*}
+\begin{equation}
 \widehat{\mathcal Y}_L := \left\{ \widehat y_\ell := \frac{\ell B}{L} : \ell\in [[L]]:=\{-L,\ldots,L\}\right\},
 \qquad |\widehat{\mathcal Y}_L|=2L+1.
-\end{equation*}
+\end{equation}
 A feasible predictor must satisfy $Supp(\pi(\cdot\mid x))=\widehat{\mathcal Y}_L$ for all $x$.
 
 \paragraph{Why discretize?}
 Because with a fixed finite support, DP reduces to finitely many \emph{linear} constraints on the
 probabilities $\pi(\ell\mid x)$:
-\begin{equation*}
+\begin{equation}
 \Pp(\widehat Y_\pi=\widehat y_\ell\mid S=s)=\Pp(\widehat Y_\pi=\widehat y_\ell)
 \quad\Longleftrightarrow\quad
 \E[\pi(\ell\mid X)\mid S=s]=\E[\pi(\ell\mid X)].
-\end{equation*}
+\end{equation}
 They allow slack via thresholds $\varepsilon=(\varepsilon_s)_{s\in[K]}$ and define (per group, per bin)
-\begin{equation*}
+\begin{equation}
 U_s(\pi,\ell):=\Big|\E[\pi(\ell\mid X)\mid S=s]-\E[\pi(\ell\mid X)]\Big| \le \varepsilon_s.
-\end{equation*}
+\end{equation}
 
 \paragraph{Important sanity point \marie{(parce que j'ai eu un doute)}: this is \emph{not} turning regression into classification.}
 The algorithm learns a \emph{distribution} over grid values; you can output either a sample
@@ -399,17 +499,17 @@ switch to an entropic-regularized variant \marie{(comme c'est leur gros argument
 
 \paragraph{Entropy-regularized risk.}
 Let $\Psi(\mu)=\sum_{y\in Supp(\mu)}\mu(y)\log\mu(y)$ denote negative entropy. For $\beta>0$:
-\begin{equation*}
+\begin{equation}
 R_\beta(\pi):=R(\pi) + \frac{1}{\beta}\E\big[\Psi(\pi(\cdot\mid X))\big].
-\end{equation*}
+\end{equation}
 
 \paragraph{Dual variables and key reparameterization.}
 Define
-\begin{equation*}
+\begin{equation}
 t(x):= \mathbf{1} - \frac{\tau(x)}{p}\in\R^K \qquad (\text{componentwise division}),
 \qquad
 r_\ell(x):=\big(\eta(x)-\widehat y_\ell\big)^2.
-\end{equation*}
+\end{equation}
 
 \subsection{Lemma 3.1 (the main structural lemma)}
 The entropic-regularized problem admits a solution that can be written explicitly in terms of
@@ -418,12 +518,12 @@ nonnegative dual matrices $\Lambda=(\lambda_{\ell s})$ and $V=(\nu_{\ell s})$, a
 \paragraph{Dual objective (smooth convex).}
 Let $\lambda_\ell=(\lambda_{\ell s})_{s\in[K]}$ and $\nu_\ell=(\nu_{\ell s})_{s\in[K]}$.
 Define the log-sum-exp at temperature $\beta$ by
-\begin{equation*}
+\begin{equation}
 \mathrm{LSE}_\beta(w)=\beta^{-1}\log\Big(\sum_j e^{\beta w_j}\Big),
-\end{equation*}
+\end{equation}
 and the soft-argmax / softmax by $\sigma_j(w)=\frac{e^{w_j}}{\sum_i e^{w_i}}$.
 Then define
-\begin{equation*}
+\begin{equation}
 F(\Lambda,V):=
 \E\Big[
 \mathrm{LSE}_\beta\Big( \big(\langle \lambda_\ell-\nu_\ell,\,t(X)\rangle - r_\ell(X)\big)_{\ell\in[[L]]}\Big)
@@ -431,11 +531,11 @@ F(\Lambda,V):=
 \;+\;
 \sum_{\ell\in[[L]]}\langle \lambda_\ell+\nu_\ell,\varepsilon\rangle,
 \quad \Lambda,V\ge 0.
-\end{equation*}
+\end{equation}
 
 \paragraph{Primal solution (softmax form).}
 If $(\Lambda^\star,V^\star)$ minimizes $F$, then an optimal predictor is
-\begin{equation*}
+\begin{equation}
 \boxed{
 \pi_{\Lambda^\star,V^\star}(\ell\mid x)
 =
@@ -443,29 +543,29 @@ If $(\Lambda^\star,V^\star)$ minimizes $F$, then an optimal predictor is
 \beta\big(\langle \lambda^\star_{\ell'}-\nu^\star_{\ell'},\,t(x)\rangle - r_{\ell'}(x)\big)_{\ell'\in[[L]]}
 \right).
 }
-\end{equation*}
+\end{equation}
 
 \paragraph{Interpretation.}
 When $\Lambda=V=0$, (no fairness constraints), we have
-\begin{equation*}
+\begin{equation}
 \pi_{0,0}(\ell\mid x)\propto \exp\big(-\beta(\eta(x)-\widehat y_\ell)^2\big),
-\end{equation*}
+\end{equation}
 so the distribution concentrates around the grid point closest to $\eta(x)$; the dual terms then
 reweight bins to enforce DP across groups.
 
 \subsection{Regularity + why gradient norm matters (Lemma 3.4 + 3.5)}
 Let
-\begin{equation*}
+\begin{equation}
 \sigma^2 := 2\sum_{s\in[K]}\frac{1-p_s}{p_s}.
-\end{equation*}
+\end{equation}
 Then $\nabla F$ is $(\beta\sigma^2)$-Lipschitz, so larger $\beta$ makes $F$ less smooth.
 
 Since the dual domain is constrained ($\Lambda,V\ge 0$), they use the \textbf{gradient mapping}
 (for stepsize $\alpha>0$)
-\begin{equation*}
+\begin{equation}
 G_\alpha(\Lambda,V):=
 \frac{(\Lambda,V)-\big((\Lambda,V)-\alpha\nabla F(\Lambda,V)\big)_+}{\alpha},
-\end{equation*}
+\end{equation}
 where $(\cdot)_+$ is coordinatewise projection onto $\R_+^{2(2L+1)K}$.
 
 \paragraph{Lemma 3.5 (key implication).}
@@ -592,58 +692,439 @@ $\implies$ interesting to see the statiqsticak guarantees we can have with the O
 
 \newpage
 
-Main difference in implementation: 
+\section{Analysis on real data}
+
+\marie{J'ai importé leur code pour utiliser exactement la meme chose, j'ai testé plein de truc mais j'ai toujours des matmul warning de l'enfer meme en scalant tout
+par contre j'ai bien verifié et toutes les données sont finies donc c'est harmless en terme de perf mais c'est bizarre}
+
+\paragraph{Data splitting and sample sizes.}
+After loading $(X,S,y)$, we follow the same preprocessing choices as the original \textsc{FairReg} evaluation code. 
+In particular, for \texttt{adult} and \texttt{lawschool} we optionally rescale the target $y$ to $[-1,1]$ (via a min--max transform) and we subsample the dataset to a fixed size of $N=2000$ points. 
+For \texttt{communities}, we keep the full dataset (denote by $N$ its size after loading and optional scaling). 
+For each run $i$, we then construct three disjoint splits using two successive calls to \texttt{train\_test\_split}, always \textcolor{red}{stratified by the sensitive attribute} $S$ to preserve group proportions. 
+First, we split the full dataset into a training set of size $1-\texttt{TEST\_SIZE}$ and a remaining set of size $\texttt{TEST\_SIZE}$. 
+Second, we split this remaining set into an unlabeled set and a test set, using
+\[
+\texttt{train\_size}=\frac{\texttt{TRAIN\_SIZE}}{1-\texttt{TEST\_SIZE}}.
+\]
+With the default parameters $\texttt{TRAIN\_SIZE}=0.4$ and $\texttt{TEST\_SIZE}=0.2$, this yields the following proportions of the total sample size $N$:
+\begin{align*}
+N_{\text{train}} &= (1-\texttt{TEST\_SIZE})\,N = 0.8N,\\
+N_{\text{unlab}} &= \texttt{TEST\_SIZE}\cdot\frac{\texttt{TRAIN\_SIZE}}{1-\texttt{TEST\_SIZE}}\,N 
+= 0.2\cdot\frac{0.4}{0.8}N = 0.1N,\\
+N_{\text{test}}  &= \texttt{TEST\_SIZE}\cdot\Bigl(1-\frac{\texttt{TRAIN\_SIZE}}{1-\texttt{TEST\_SIZE}}\Bigr)\,N
+= 0.2\cdot\Bigl(1-\frac{0.4}{0.8}\Bigr)N = 0.1N.
+\end{align*}
+Concretely, for \texttt{adult} and \texttt{lawschool} where $N=2000$, we obtain $1600$ labeled training points, $200$ unlabeled points, and $200$ test points per run. 
+The labeled training split is used to fit the baseline regressor $\eta$ (linear regression) and the sensitive-attribute classifier (logistic regression), while the unlabeled split is used to fit \textsc{FairReg} and to estimate the OT-based correction; all methods are finally evaluated on the held-out test split.
+
+\marie{They use only 2000 points  don't know why but i am trying to find out, maybe it's linked to some hyperparameter tuning}
+
+\paragraph{Hyperparameters.}
+For \textsc{FairReg}, we use the default hyperparameters from the original code:
 \begin{itemize}
-  \item OT: we learn the transport on the same data we trained on they use the $X_unlab$ to 
+  \item the number of points in the grid is $\sqrt{N_{\text{unlab}}}$ (i.e., $14$ for $N_{\text{unlab}}=200$),
+  \item the entropic regularization parameter is $\beta = \tfrac{1}{2}\sqrt{N_{\text{unlab}}}\,\log_2 N_{\text{unlab}}$ (i.e., $\approx 54.1$ for $N_{\text{unlab}}=200$), \marie{la temperature a un enorme impact sur les perf du modele du coup j'ai pas laissé auto sinon c'etait trop nul}
+  \item the DP slack parameter is $\varepsilon = 0.01$.
 \end{itemize}
+\subsection{Adult dataset}
+
+\paragraph{Adult (Census Income).}
+The \texttt{Adult} dataset contains individual-level records from the U.S.\ census, described by demographic and employment-related attributes such as age, education, marital status, occupation, hours worked per week, and capital gain/loss. 
+The original prediction task is to infer whether an individual earns more than \$50K per year (binary label \texttt{income}); in the pipeline of Fairreg, this target is preprocessed into a numeric response. 
+The dataset also includes sensitive attributes such as \texttt{sex} and \texttt{race}. 
+\marie{ y'a aussi des fields de variables categoriques qui ont plein de données manquantes sous forme de "?" qu'on drop au preprocessing}\\
+
+\marie{COMMENTAIRE: c'est un peu bizarre ce qu'ils font dans la pipeline parce que pendant le préprocessing au lieu d'utiliser la target de d'habitude ils utilisent l'age c'est pour ça qu ces exemple est pas hyper relevant (of course l'age est pas biaisé en fonction du genre mais au moins ça test sur des vraies valeurs bien confondues les méthodes...)}
+
+\subsubsection{Analysis of the dataset}
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/ot_diagnostics/ot_scatter_XY_colored_by_S.pdf}
+    \caption{Scatter plot of $(X,Y)$ colored by $S$ (Adult dataset; run 10).}
+\end{figure}
+
+
+\subsubsection{OT}
+
+
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/ot_diagnostics/transport/ot_ot_matrices_full.pdf}
+    \caption{OT plan (Adult dataset; run 10).}
+\end{figure}
+\begin{figure}[h]
+  \centering
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/ot_diagnostics/ot_agg_plan_eta.pdf}
+    \caption{Aggregated OT plan (Adult dataset; run 10).}
+    \end{figure}
+
+    \begin{figure}[h]
+      \centering
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/ot_diagnostics/ot_eta_delta_colored_by_Y.pdf}
+        \small Scatter plot of $(X,Y)$ colored by $\Delta$ (Adult dataset; run 10).
+      \end{minipage}\hfill
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/ot_diagnostics/ot_base_vs_fair_scatter.pdf}
+        \small Base vs fair scatter (Adult dataset; run 10).
+      \end{minipage}
+      \caption{Side-by-side: colored-by-$\Delta$ vs base-vs-fair scatter (Adult dataset; run 10).}
+    \end{figure}
+
+    \begin{figure}[h]
+      \centering
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/ot_diagnostics/ot_barycenter_links.pdf}
+        \small Barycenter links.
+x      \end{minipage}\hfill
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/ot_diagnostics/ot_eta_delta_transport_lines.pdf}
+        \small Transport lines in $(\eta,\Delta)$ space.
+      \end{minipage}
+      \caption{Barycenter links and transport lines (Adult dataset; run 10).}
+    \end{figure}
+
+    \subsubsection{Hyperparameters tuning}
+
+    \begin{figure}[h]
+      \centering
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/fairreg/fairreg_tuning_curve_L_beta.png}
+        \caption{OT tuning curve Adult (run 10).}
+    \end{figure}
+    % \subsubsection{Since the Fairreg seems to be sensible to hyperparams: tuning}
+
+    % \begin{figure}[h]
+    %   \centering
+    %     \centering
+    %     \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/fairreg_tuning_curve_L_beta.png}
+    %     \caption{Fairreg tuning curve Adult (run 10).}
+    % \end{figure}
+\subsubsection{Unfairness and MSE}
+\begin{table}[t]
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    Quantity & Mean $\pm$ Std \\
+    \midrule
+    \texttt{mse\_base}        & $0.0161 \pm 0.0005$ \\
+    \texttt{mse\_fairreg}     & $0.0162 \pm 0.0005$ \\
+    \texttt{mse\_ot}          & $0.0170 \pm 0.0004$ \\
+    \texttt{dp\_base\_max}    & $0.1588 \pm 0.0101$ \\
+    \texttt{dp\_fairreg\_max} & $0.1498 \pm 0.0100$ \\
+    \texttt{dp\_ot\_max}      & $0.0292 \pm 0.0096$ \\
+    \bottomrule
+  \end{tabular}
+  \caption{Summary (mean $\pm$ std over runs) Adult.}
+  \label{tab:summary}
+\end{table}
+
+\begin{figure} \centering
+    \centering
+    \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/plots/pred_kde_by_group.png}
+    \caption{Prediction distributions by group (Adult dataset; run 10).}
+\end{figure}
+
+
+\subsubsection{Ordering stability and leakage AUC}
+
+
+\begin{table}[t]
+  \centering
+  \begin{tabular}{lrrrr}
+  \toprule
+  Subset & Spearman $\rho$ & Kendall $\tau_b$ & Mean $|\Delta\mathrm{rank}|$ & Top-5\% Jaccard \\
+  \midrule
+  overall & 0.447 & 0.347 & 0.220 & 0.408 \\
+  S=0 & 0.207 & 0.163 & 0.284 & 0.280 \\
+  S=1 & 0.587 & 0.459 & 0.181 & 0.474 \\
+  \bottomrule
+  \end{tabular}
+  \caption[Ordering stability between eta-hat and corrected scores.]{Ordering stability between $\hat\eta$ and corrected scores Adult.}
+  \label{tab:ordering}
+  \end{table}
+  
+  \begin{table}[t]
+  \centering
+  \begin{tabular}{lr}
+  \toprule
+  Quantity & AUC \\
+  \midrule
+  $\mathrm{AUC}(S\mid Y)$ & 0.567 \\
+  $\mathrm{AUC}(S\mid \hat{\eta})$ & 0.653 \\
+  $\mathrm{AUC}(S\mid \tilde{y})$ & 0.480 \\
+  \bottomrule
+  \end{tabular}
+  \caption[Leakage AUC summary.]{Leakage AUC Adult: ability to infer $S$ from a scalar score (values near 0.5 indicate low leakage).}
+  \label{tab:auc}
+  \end{table}
+  
+
+  Conclusion: OT better at reducing leakage and preserving order within groups. But the datase is already almost free from leakage so not really relevant. 
+
+  \subsection{Communities and Crime dataset}
+
+  \paragraph{Communities and Crime.}
+The \texttt{Communities and Crime} dataset is community-level: each example corresponds to a U.S.\ community characterized by a high-dimensional set of socio-economic, demographic, housing, and policing variables (e.g., racial composition percentages, income and poverty indicators, employment structure, household composition, immigration, housing characteristics, and law-enforcement resources). 
+The canonical target variable is the violent crime rate per population, \texttt{ViolentCrimesPerPop}. 
+In many standard versions of the dataset, features are already normalized to the unit interval, and missing entries can occur (depending on the preprocessing). 
+The sensitive attribute is obtained by taking the highest percentage of a racial group in the community (among \texttt{White}, \texttt{Black}, \texttt{Asian}, \texttt{Hispanic}, \texttt{NativeAmerican}, \texttt{Other}) and binarizing it into majority-\texttt{White} vs.\ non-majority-\texttt{White} communities.
+
+  \subsubsection{Analysis of the dataset}
+
+  Too many columns in X for his dataset so no scatter plot of (X,Y) colored by S. (uncomment to see attempt)
+  % too many columns in X 
+  % \begin{figure}
+  %   \centering
+  %     \centering
+  %     \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/run_10/ot_diagnostics/ot_scatter_XY_colored_by_S.pdf}
+  %     \caption{Scatter plot of $(X,Y)$ colored by $S$ (Crime dataset; run 10).}
+  % \end{figure}
+
+  \subsubsection{OT}
+  \begin{figure}[h]
+    \centering
+      \centering
+      \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/ot_diagnostics/transport/ot_ot_matrices_full.pdf}
+      \caption{OT plan (Crime dataset; run 10).}
+  \end{figure}
+  \begin{figure}[h]
+    \centering
+      \centering
+      \includegraphics[width=0.7\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/ot_diagnostics/ot_agg_plan_eta.pdf}
+      \caption{Aggregated OT plan (Crime dataset; run 10).}
+    \end{figure}
+    \begin{figure}[h]
+      \centering
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/ot_diagnostics/ot_eta_delta_colored_by_Y.pdf}
+        \small Scatter plot of $(X,Y)$ colored by $\Delta$ (Crime dataset; run 10).
+      \end{minipage}\hfill
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/ot_diagnostics/ot_base_vs_fair_scatter.pdf}
+        \small Base vs fair scatter (Crime dataset; run 10).
+      \end{minipage}
+      \caption{Side-by-side: colored-by-$\Delta$ vs base-vs-fair scatter (Crime dataset; run 10).}
+    \end{figure}
+    \begin{figure}[h]
+      \centering
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/ot_diagnostics/ot_barycenter_links.pdf}
+        \small Barycenter links.
+      \end{minipage}\hfill
+      \begin{minipage}[t]{0.48\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/ot_diagnostics/ot_eta_delta_transport_lines.pdf}
+        \small Transport lines in $(\eta,\Delta)$ space.
+      \end{minipage}
+      \caption{Barycenter links and transport lines (Crime dataset; run 10).}
+    \end{figure}  
+  \subsubsection{Unfairness and MSE}
+
+  \begin{table}[t]
+    \centering
+    \begin{tabular}{ll}
+      \toprule
+      Quantity & Mean $\pm$ Std \\
+      \midrule
+      \texttt{mse\_base}        & $0.0196 \pm 0.0032$ \\
+      \texttt{mse\_fairreg}     & $0.0259 \pm 0.0037$ \\
+      \texttt{mse\_ot}          & $0.0408 \pm 0.0059$ \\
+      \texttt{dp\_base\_max}    & $0.4326 \pm 0.0395$ \\
+      \texttt{dp\_fairreg\_max} & $0.2616 \pm 0.0370$ \\
+      \texttt{dp\_ot\_max}      & $0.0981 \pm 0.0369$ \\
+      \bottomrule
+    \end{tabular}
+    \caption{Summary (mean $\pm$ std over runs) Communities and crimes.}
+    \label{tab:crime_summary}
+  \end{table}
+  \begin{figure}
+    \centering
+      \centering
+      \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/plots/pred_kde_by_group.png}
+      \caption{Prediction distributions by group (Crime dataset; run 10).}
+  \end{figure}  
+  \subsubsection{Ordering stability and leakage AUC}
+
+  \begin{table}[t]
+    \centering
+    \begin{tabular}{lrrrr}
+    \toprule
+    Subset & Spearman $\rho$ & Kendall $\tau_b$ & Mean $|\Delta\mathrm{rank}|$ & Top-5\% Jaccard \\
+    \midrule
+    overall & 0.689 & 0.590 & 0.167 & 0.125 \\
+    S=0 & 0.526 & 0.436 & 0.235 & 0.333 \\
+    S=1 & 0.908 & 0.813 & 0.076 & 0.273 \\
+    \bottomrule
+    \end{tabular}
+    \caption[Ordering stability between eta-hat and corrected scores Communities and crime.]{Ordering stability between $\hat\eta$ and corrected scores.}
+    \label{tab:ordering}
+    \end{table}
+    
+    \begin{table}[t]
+    \centering
+    \begin{tabular}{lr}
+    \toprule
+    Quantity & AUC \\
+    \midrule
+    $\mathrm{AUC}(S\mid Y)$ & 0.168 \\
+    $\mathrm{AUC}(S\mid \hat{\eta})$ & 0.096 \\
+    $\mathrm{AUC}(S\mid \tilde{y})$ & 0.477 \\
+    \bottomrule
+    \end{tabular}
+    \caption[Leakage AUC summary.]{Leakage AUC Comunities and Crime: ability to infer $S$ from a scalar score (values near 0.5 indicate low leakage).}
+    \label{tab:auc}
+    \end{table}
+
+    Conclusion: OT better at reducing leakage and preserving order within groups. Here the dataset is very biased so relevant.
+    THe reordering is quite strong on S=0 group (much more than on S=1). 
+    \marie{Maybe it's because it is actually a merge of multiple communities with different characteristics? }
+
+
+
+
+    \subsubsection{Hyperparamters tuning}
+    \begin{figure}[h]
+      \centering
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/fairreg/fairreg_tuning_curve_L_beta.png}
+        \caption{Fairreg tuning curve Communities and Crime (run 10).}
+    \end{figure}
+    \subsection{Lawschool dataset}
+
+\paragraph{Law School.}
+The \texttt{Law School} dataset contains student-level records related to law school admissions and academic outcomes. 
+Covariates include academic indicators such as \texttt{lsat} and undergraduate GPA (\texttt{ugpa}), along with demographic and background variables such as \texttt{race}, \texttt{gender}, age, and family income. Outcome variables include standardized grade-point averages (e.g., first-year GPA \texttt{zfygpa} and overall GPA \texttt{zgpa}) and, in some versions, bar exam passage information (\texttt{bar1}).
+The sensitive attribute is the race "1" (white) vs. "0" (non-white).
+
+    \subsubsection{Analysis of the dataset}
+    \begin{figure}
+      \centering
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/ot_scatter_XY_colored_by_S.pdf}
+        \caption{Scatter plot of $(X,Y)$ colored by $S$ (Lawschool dataset; run 10).}
+    \end{figure}
+    \subsubsection{OT}
+    \begin{figure}[h]
+      \centering
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/transport/ot_ot_matrices_full.pdf}
+        \caption{OT plan (Lawschool dataset; run 10).}
+    \end{figure}
+    \begin{figure}[h]
+      \centering
+        \centering
+        \includegraphics[width=0.7\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/ot_agg_plan_eta.pdf}
+        \caption{Aggregated OT plan (Lawschool dataset; run 10).}
+      \end{figure}
+      \begin{figure}[h]
+        \centering
+        \begin{minipage}[t]{0.48\linewidth}
+          \centering
+          \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/ot_eta_delta_colored_by_Y.pdf}
+          \small Scatter plot of $(X,Y)$ colored by $\Delta$ (Lawschool dataset; run 10).
+        \end{minipage}\hfill
+        \begin{minipage}[t]{0.48\linewidth}
+          \centering
+          \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/ot_base_vs_fair_scatter.pdf}
+          \small Base vs fair scatter (Lawschool dataset; run 10).
+        \end{minipage}
+        \caption{Side-by-side: colored-by-$\Delta$ vs base-vs-f air scatter (Lawschool dataset; run 10).}
+      \end{figure}
+      \begin{figure}[h]
+        \centering
+        \begin{minipage}[t]{0.48\linewidth}     
+          \centering
+          \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/ot_barycenter_links.pdf}
+          \small Barycenter links.
+        \end{minipage}\hfill
+        \begin{minipage}[t]{0.48\linewidth}
+          \centering
+          \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/ot_eta_delta_transport_lines.pdf}
+          \small Transport lines in $(\eta,\Delta)$ space.
+        \end{minipage}
+        \caption{Barycenter links and transport lines (Lawschool dataset; run 10).}
+      \end{figure}  
+
+      \subsubsection{Hyperparamters tuning}
+      \begin{figure}[h]
+        \centering
+          \centering
+          \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/fairreg/fairreg_tuning_curve_L_beta.png}
+          \caption{Fairreg tuning curve Lawschool (run 10).}
+      \end{figure}
+
+      \subsubsection{Unfairness and MSE}  
+
+    \begin{table}[t]
+      \centering
+      \begin{tabular}{ll}
+      \toprule
+      Quantity & Mean $\pm$ Std \\
+      \midrule
+      \texttt{mse\_base}        & $0.0093 \pm 0.0004$ \\
+      \texttt{mse\_fairreg}     & $0.0095 \pm 0.0004$ \\
+      \texttt{mse\_ot}          & $0.0097 \pm 0.0004$ \\
+      \texttt{dp\_base\_max}    & $0.2274 \pm 0.0244$ \\
+      \texttt{dp\_fairreg\_max} & $0.0969 \pm 0.0202$ \\
+      \texttt{dp\_ot\_max}      & $0.0465 \pm 0.0209$ \\
+      \bottomrule
+      \end{tabular}
+      \caption{Summary (mean $\pm$ std over runs) Lawschool.}
+      \label{tab:lawschool_summary}
+    \end{table}
+
+    \begin{figure}
+      \centering
+        \centering
+        \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/plots/pred_kde_by_group.png}
+        \caption{Prediction distributions by group (Lawschool dataset; run 10).}
+    \end{figure}  
+    \subsubsection{Ordering stability and leakage AUC}
+
+    \begin{table}[t]
+      \centering
+      \begin{tabular}{lrrrr}
+      \toprule
+      Subset & Spearman $\rho$ & Kendall $\tau_b$ & Mean $|\Delta\mathrm{rank}|$ & Top-5\% Jaccard \\
+      \midrule
+      overall & 0.900 & 0.763 & 0.091 & 0.667 \\
+      S=0 & 0.865 & 0.677 & 0.121 & 1.000 \\
+      S=1 & 0.928 & 0.805 & 0.076 & 0.778 \\
+      \bottomrule
+      \end{tabular}
+      \caption[Ordering stability between eta-hat and corrected scores.]{Ordering stability between $\hat\eta$ and corrected scores Lawchool.}
+      \label{tab:ordering}
+      \end{table}
+      
+      \begin{table}[t]
+      \centering
+      \begin{tabular}{lr}
+      \toprule
+      Quantity & AUC \\
+      \midrule
+      $\mathrm{AUC}(S\mid Y)$ & 0.612 \\
+      $\mathrm{AUC}(S\mid \hat{\eta})$ & 0.637 \\
+      $\mathrm{AUC}(S\mid \tilde{y})$ & 0.513 \\
+      \bottomrule
+      \end{tabular}
+      \caption[Leakage AUC summary.]{Leakage AUC Lawschool: ability to infer $S$ from a scalar score (values near 0.5 indicate low leakage).}
+      \label{tab:auc}
+      \end{table} 
 
 \newpage
 
-
-% \section{Ordering preservation between $\hat\eta$ (before correction) and $\tilde y$ (after correction).}
-% Let $n$ be the number of individuals, and let $\pi_{\hat\eta}$ (resp. $\pi_{\tilde y}$) denote the permutation that sorts $\hat\eta$ (resp. $\tilde y$) in increasing order. We report the following rank-based metrics.
-
-% \begin{enumerate}
-
-% \item \textbf{Spearman rank correlation} $\rho_S$.
-% \[
-% \rho_S(\hat\eta,\tilde y)
-% \;=\;
-% \mathrm{corr}\!\big(\mathrm{rank}(\hat\eta),\,\mathrm{rank}(\tilde y)\big).
-% \]
-% \emph{Interpretation.} Measures global monotonic agreement between the two rankings. 
-% $\rho_S=1$ means perfect rank preservation; $\rho_S\approx 0$ indicates weak association; $\rho_S<0$ indicates an inverted ranking.
-
-% \item \textbf{Kendall's $\tau_b$}.
-% \[
-% \tau_b(\hat\eta,\tilde y)
-% \;=\;
-% \frac{C-D}{\sqrt{(C+D+T_{\hat\eta})(C+D+T_{\tilde y})}},
-% \]
-% where $C$ (resp. $D$) is the number of \emph{concordant} (resp. \emph{discordant}) pairs $(i,j)$, and 
-% $T_{\hat\eta}$ (resp. $T_{\tilde y}$) counts ties in $\hat\eta$ (resp. $\tilde y$).\\
-% \emph{Interpretation.} Pairwise notion of rank consistency: it estimates the fraction of pairs that keep the same order (accounting for ties). 
-% $\tau_b=1$ means all pairs preserve their order; smaller values indicate more inversions.
-
-% \item \textbf{Mean absolute rank displacement} $\mathrm{MAD}_{\mathrm{rank}}$.
-% \[
-% \mathrm{MAD}_{\mathrm{rank}}(\hat\eta,\tilde y)
-% \;=\;
-% \frac{1}{n(n-1)}\sum_{i=1}^n 
-% \bigl|\mathrm{rank}(\hat\eta_i)-\mathrm{rank}(\tilde y_i)\bigr|.
-% \]
-% \emph{Interpretation.} Average amount (in relative rank units) by which individuals move in the ordering after correction.
-% Values near $0$ = no reordering; values closer to $1$ = large mélange.
-
-% \item \textbf{Top-$k$ Jaccard overlap} $J_k$.
-% Let $\mathrm{Top}_k(z)=\{i:\ z_i \text{ is among the } k \text{ largest entries of } z\}$.
-% \[
-% J_k(\hat\eta,\tilde y)
-% \;=\;
-% \frac{\bigl|\mathrm{Top}_k(\hat\eta)\cap \mathrm{Top}_k(\tilde y)\bigr|}
-% {\bigl|\mathrm{Top}_k(\hat\eta)\cup \mathrm{Top}_k(\tilde y)\bigr|}.
-% \]
-% \emph{Interpretation.} Stability of the \emph{selected} set (e.g., admissions/shortlist): $J_k=1$ means the same top-$k$ individuals are selected before/after correction; $J_k=0$ means the top-$k$ sets are disjoint.
-% \end{enumerate}
 
 \end{document}
