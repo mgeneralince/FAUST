@@ -229,7 +229,6 @@ def auc_to_latex_table(
     Produces a paper-friendly table (no python keys).
     Uses hyperref-safe caption_short for bookmarks.
     """
-    # order 
     rows = [
         ("auc_S_from_Y", r"$\mathrm{AUC}(S\mid Y)$"),
         ("auc_S_from_eta", r"$\mathrm{AUC}(S\mid \hat{\eta})$"),

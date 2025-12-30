@@ -1,3 +1,4 @@
+% !TEX root = ../notes.tex
 \documentclass[11pt]{article}
 
 \usepackage[a4paper,margin=1in]{geometry}
@@ -11,38 +12,19 @@
 \usepackage{hyperref}
 \hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=black}
 
-% --- quick macros (notes vibe) ---
-\newcommand{\R}{\mathbb{R}}
-\newcommand{\E}{\mathbb{E}}
-\newcommand{\Pp}{\mathbb{P}}
-\newcommand{\1}{\mathbf{1}}
-\newcommand{\Law}{\mathcal{L}}
-\newcommand{\X}{\mathcal{X}}
-\newcommand{\Sset}{\mathcal{S}}
-\newcommand{\Uset}{\mathcal{U}}
-\newcommand{\push}{\#}
-\newcommand{\argmin}{\operatorname*{arg\,min}}
-\newcommand{\OT}{\mathrm{OT}}
-\newcommand{\TV}{\mathrm{TV}}
-\newcommand{\sgn}{\mathrm{sgn}}
-\newcommand{\dd}{\,\mathrm{d}}
-
-% color text with commands for comment s
-\newcommand{\marie}[1]{{\color{purple}#1}}
-\newcommand{\remi}[1]{{\color{pink}#1}}
-\newcommand{\vincent}[1]{{\color{orange}#1}}
+\usepackage{preamble}
 
 \setlist[itemize]{topsep=2pt,itemsep=2pt,parsep=0pt,leftmargin=1.2em}
 \setlist[enumerate]{topsep=2pt,itemsep=2pt,parsep=0pt,leftmargin=1.4em}
 
-\title{\vspace{-0.7em}\Large Demographic Parity in regression \& classiffication (unawareness)\\
+\title{\vspace{-0.7em}\Huge Demographic Parity in regression \& classiffication (unawareness)\\
 \large{\emph{}}}
 \date{}
 
 \begin{document}
 \maketitle
 
-
+\part{Framework from \textcite{divol2024demographicparityregressionclassification}} 
 \section{Setting}
 Data $(X,S,Y)\in\X\times\Sset\times\R$; $S\in\{1,\dots,K\}$.
 \begin{itemize}
@@ -412,6 +394,11 @@ All confounded experiements are with $n=1500$
 \newpage
 
 
+\clearpage
+\part{Unawareness from \textcite{chzhen2024regressiondemographicparityconstraints}}
+\label{part:chzhen}
+
+
 
 \section{what porblem do they solve?}
 We want regression under \textbf{demographic parity (DP)} in the \textbf{unawareness} setting:
@@ -690,9 +677,10 @@ Fainress through $\Delta(x)$ or $\tau(x)$.
 $\implies$ interesting to see the statiqsticak guarantees we can have with the OT post-processing + see what happens with $K>2$.
 
 
-\newpage
+\clearpage
+\part{Comparison on real data}
+\label{part:comparison}
 
-\section{Analysis on real data}
 
 \marie{J'ai importé leur code pour utiliser exactement la meme chose, j'ai testé plein de truc mais j'ai toujours des matmul warning de l'enfer meme en scalant tout
 par contre j'ai bien verifié et toutes les données sont finies donc c'est harmless en terme de perf mais c'est bizarre}
@@ -727,7 +715,7 @@ For \textsc{FairReg}, we use the default hyperparameters from the original code:
   \item the entropic regularization parameter is $\beta = \tfrac{1}{2}\sqrt{N_{\text{unlab}}}\,\log_2 N_{\text{unlab}}$ (i.e., $\approx 54.1$ for $N_{\text{unlab}}=200$), \marie{la temperature a un enorme impact sur les perf du modele du coup j'ai pas laissé auto sinon c'etait trop nul}
   \item the DP slack parameter is $\varepsilon = 0.01$.
 \end{itemize}
-\subsection{Adult dataset}
+\section{Adult dataset}
 
 \paragraph{Adult (Census Income).}
 The \texttt{Adult} dataset contains individual-level records from the U.S.\ census, described by demographic and employment-related attributes such as age, education, marital status, occupation, hours worked per week, and capital gain/loss. 
@@ -737,7 +725,7 @@ The dataset also includes sensitive attributes such as \texttt{sex} and \texttt{
 
 \marie{COMMENTAIRE: c'est un peu bizarre ce qu'ils font dans la pipeline parce que pendant le préprocessing au lieu d'utiliser la target de d'habitude ils utilisent l'age c'est pour ça qu ces exemple est pas hyper relevant (of course l'age est pas biaisé en fonction du genre mais au moins ça test sur des vraies valeurs bien confondues les méthodes...)}
 
-\subsubsection{Analysis of the dataset}
+\subsection{Analysis of the dataset}
 
 \begin{figure}[h]
   \centering
@@ -747,7 +735,7 @@ The dataset also includes sensitive attributes such as \texttt{sex} and \texttt{
 \end{figure}
 
 
-\subsubsection{OT}
+\subsection{OT}
 
 
 \begin{figure}[h]
@@ -793,7 +781,7 @@ x      \end{minipage}\hfill
       \caption{Barycenter links and transport lines (Adult dataset; run 10).}
     \end{figure}
 
-    \subsubsection{Hyperparameters tuning}
+    \subsection{Hyperparameters tuning}
 
     \begin{figure}[h]
       \centering
@@ -809,7 +797,7 @@ x      \end{minipage}\hfill
     %     \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/adult/full/rf/run_10/fairreg_tuning_curve_L_beta.png}
     %     \caption{Fairreg tuning curve Adult (run 10).}
     % \end{figure}
-\subsubsection{Unfairness and MSE}
+\subsection{Unfairness and MSE}
 \begin{table}[t]
   \centering
   \begin{tabular}{ll}
@@ -835,7 +823,7 @@ x      \end{minipage}\hfill
 \end{figure}
 
 
-\subsubsection{Ordering stability and leakage AUC}
+\subsection{Ordering stability and leakage AUC}
 
 
 \begin{table}[t]
@@ -871,7 +859,7 @@ x      \end{minipage}\hfill
 
   Conclusion: OT better at reducing leakage and preserving order within groups. But the datase is already almost free from leakage so not really relevant. 
 
-  \subsection{Communities and Crime dataset}
+  \section{Communities and Crime dataset}
 
   \paragraph{Communities and Crime.}
 The \texttt{Communities and Crime} dataset is community-level: each example corresponds to a U.S.\ community characterized by a high-dimensional set of socio-economic, demographic, housing, and policing variables (e.g., racial composition percentages, income and poverty indicators, employment structure, household composition, immigration, housing characteristics, and law-enforcement resources). 
@@ -879,7 +867,7 @@ The canonical target variable is the violent crime rate per population, \texttt{
 In many standard versions of the dataset, features are already normalized to the unit interval, and missing entries can occur (depending on the preprocessing). 
 The sensitive attribute is obtained by taking the highest percentage of a racial group in the community (among \texttt{White}, \texttt{Black}, \texttt{Asian}, \texttt{Hispanic}, \texttt{NativeAmerican}, \texttt{Other}) and binarizing it into majority-\texttt{White} vs.\ non-majority-\texttt{White} communities.
 
-  \subsubsection{Analysis of the dataset}
+  \subsection{Analysis of the dataset}
 
   Too many columns in X for his dataset so no scatter plot of (X,Y) colored by S. (uncomment to see attempt)
   % too many columns in X 
@@ -890,7 +878,7 @@ The sensitive attribute is obtained by taking the highest percentage of a racial
   %     \caption{Scatter plot of $(X,Y)$ colored by $S$ (Crime dataset; run 10).}
   % \end{figure}
 
-  \subsubsection{OT}
+  \subsection{OT}
   \begin{figure}[h]
     \centering
       \centering
@@ -931,7 +919,7 @@ The sensitive attribute is obtained by taking the highest percentage of a racial
       \end{minipage}
       \caption{Barycenter links and transport lines (Crime dataset; run 10).}
     \end{figure}  
-  \subsubsection{Unfairness and MSE}
+  \subsection{Unfairness and MSE}
 
   \begin{table}[t]
     \centering
@@ -956,7 +944,7 @@ The sensitive attribute is obtained by taking the highest percentage of a racial
       \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/plots/pred_kde_by_group.png}
       \caption{Prediction distributions by group (Crime dataset; run 10).}
   \end{figure}  
-  \subsubsection{Ordering stability and leakage AUC}
+  \subsection{Ordering stability and leakage AUC}
 
   \begin{table}[t]
     \centering
@@ -995,28 +983,29 @@ The sensitive attribute is obtained by taking the highest percentage of a racial
 
 
 
-    \subsubsection{Hyperparamters tuning}
+    \subsection{Hyperparamters tuning}
     \begin{figure}[h]
       \centering
         \centering
         \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/communities/full/rf/run_10/fairreg/fairreg_tuning_curve_L_beta.png}
         \caption{Fairreg tuning curve Communities and Crime (run 10).}
     \end{figure}
-    \subsection{Lawschool dataset}
+
+    \section{Lawschool dataset}
 
 \paragraph{Law School.}
 The \texttt{Law School} dataset contains student-level records related to law school admissions and academic outcomes. 
 Covariates include academic indicators such as \texttt{lsat} and undergraduate GPA (\texttt{ugpa}), along with demographic and background variables such as \texttt{race}, \texttt{gender}, age, and family income. Outcome variables include standardized grade-point averages (e.g., first-year GPA \texttt{zfygpa} and overall GPA \texttt{zgpa}) and, in some versions, bar exam passage information (\texttt{bar1}).
 The sensitive attribute is the race "1" (white) vs. "0" (non-white).
 
-    \subsubsection{Analysis of the dataset}
+    \subsection{Analysis of the dataset}
     \begin{figure}
       \centering
         \centering
         \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/ot_diagnostics/ot_scatter_XY_colored_by_S.pdf}
         \caption{Scatter plot of $(X,Y)$ colored by $S$ (Lawschool dataset; run 10).}
     \end{figure}
-    \subsubsection{OT}
+    \subsection{OT}
     \begin{figure}[h]
       \centering
         \centering
@@ -1058,7 +1047,7 @@ The sensitive attribute is the race "1" (white) vs. "0" (non-white).
         \caption{Barycenter links and transport lines (Lawschool dataset; run 10).}
       \end{figure}  
 
-      \subsubsection{Hyperparamters tuning}
+      \subsection{Hyperparamters tuning}
       \begin{figure}[h]
         \centering
           \centering
@@ -1066,7 +1055,7 @@ The sensitive attribute is the race "1" (white) vs. "0" (non-white).
           \caption{Fairreg tuning curve Lawschool (run 10).}
       \end{figure}
 
-      \subsubsection{Unfairness and MSE}  
+      \subsection{Unfairness and MSE}  
 
     \begin{table}[t]
       \centering
@@ -1092,7 +1081,7 @@ The sensitive attribute is the race "1" (white) vs. "0" (non-white).
         \includegraphics[width=\linewidth]{figs/paper/compare_ot_vs_fairreg/lawschool/full/rf/run_10/plots/pred_kde_by_group.png}
         \caption{Prediction distributions by group (Lawschool dataset; run 10).}
     \end{figure}  
-    \subsubsection{Ordering stability and leakage AUC}
+    \subsection{Ordering stability and leakage AUC}
 
     \begin{table}[t]
       \centering
@@ -1124,7 +1113,419 @@ The sensitive attribute is the race "1" (white) vs. "0" (non-white).
       \label{tab:auc}
       \end{table} 
 
+\clearpage
+\part{Relaxed unawareness}
+\label{part:relaxed}
+
+\section{Setting}
+\begin{itemize}
+  \item Let $\mathcal X := \mathbb R \times (0,\infty)$ and write $x=(h,a)\in\mathcal X$
+  (with $a$ standing for $|d|$ in the paper).
+  \item Let $\mu^+,\mu^-\in\mathcal P(\mathcal X)$ be given.
+  \item quadratic cost (same as in the paper)
+  \begin{equation*}
+  c(x,y) \;:=\; \frac{(h-y)^2}{a},\qquad x=(h,a)\in\mathcal X,\; y\in\mathbb R.
+\end{equation*}
+  \item For $\alpha\in\mathcal P(\mathcal X)$ and $\nu\in\mathcal P(\mathbb R)$ set
+  \begin{equation*}
+  OT_c(\alpha,\nu) \;:=\; \inf_{\pi\in\Pi(\alpha,\nu)} \int_{\mathcal X\times\mathbb R} c(x,y)\,d\pi(x,y),
+\end{equation*}
+  where $\Pi(\alpha,\nu)$ denotes the set of couplings between $\alpha$ and $\nu$.
+  \item $W_2$ is the usual 2-Wasserstein distance on $\mathcal P(\mathbb R)$.
+\end{itemize}
+
+\medskip
+
+\section{Relaxed unawareness OT problem}
+
+Fix $\lambda>0$. We consider the relaxed problem
+\begin{equation}\label{eq:P-lambda}
+\inf_{\nu_1,\nu_2\in\mathcal P(\mathbb R)}
+\left\{
+OT_c(\mu^+,\nu_1)+OT_c(\mu^-,\nu_2)
++\lambda\,W_2^2(\nu_1,\nu_2)
+\right\}.
+\tag{$P_\lambda$}
+\end{equation}
+
+\begin{proposition}[Closed-form relax porblem]\label{prop:relaxed_reduction}
+Let $x_1=(h_1,a_1),x_2=(h_2,a_2)\in\mathcal X$. Define the pointwise relaxed cost
+\begin{equation}\label{eq:Clambda-def}
+C_\lambda(x_1,x_2)
+\;:=\;
+\inf_{y_1,y_2\in\mathbb R}
+\left\{
+\frac{(h_1-y_1)^2}{a_1}+\frac{(h_2-y_2)^2}{a_2}+\lambda (y_1-y_2)^2
+\right\}.
+\end{equation}
+Then
+\begin{equation}\label{eq:OT-reduced}
+\inf (P_\lambda)
+\;=\;
+\inf_{\pi\in\Pi(\mu^+,\mu^-)} \int_{\mathcal X\times\mathcal X} C_\lambda(x_1,x_2)\,d\pi(x_1,x_2).
+\end{equation}
+Moreover, the minimizer in \eqref{eq:Clambda-def} is unique and given by
+\begin{equation}\label{eq:y-star}
+y_1^*(x_1,x_2)=\frac{(1+\lambda a_2)\,h_1+\lambda a_1\,h_2}{1+\lambda(a_1+a_2)},
+\qquad
+y_2^*(x_1,x_2)=\frac{\lambda a_2\,h_1+(1+\lambda a_1)\,h_2}{1+\lambda(a_1+a_2)},
+\end{equation}
+and the optimal value has the closed form
+\begin{equation}\label{eq:Clambda-closed}
+C_\lambda(x_1,x_2)
+\;=\;
+\frac{\lambda}{1+\lambda(a_1+a_2)}\,(h_1-h_2)^2.
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+
+
+\textbf{Step 1: comupling and gluing lemma.}
+We expand each term in \eqref{eq:P-lambda} with couplings:
+\begin{equation*}
+  OT_c(\mu^+,\nu_1)=\inf_{\pi_1\in\Pi(\mu^+,\nu_1)}\int c(x_1,y_1)\,d\pi_1,
+\quad
+OT_c(\mu^-,\nu_2)=\inf_{\pi_2\in\Pi(\mu^-,\nu_2)}\int c(x_2,y_2)\,d\pi_2,
+\end{equation*}
+\begin{equation*}
+  W_2^2(\nu_1,\nu_2)=\inf_{\gamma\in\Pi(\nu_1,\nu_2)}\int (y_1-y_2)^2\,d\gamma.
+\end{equation*}
+Hence
+\begin{equation*}
+  \inf (P_\lambda) = 
+  \inf_{\nu_1,\nu_2}\;
+  \inf_{\substack{
+    \pi_1\in\Pi(\mu^+,\nu_1)\\
+    \pi_2\in\Pi(\mu^-,\nu_2)\\
+    \gamma\in\Pi(\nu_1,\nu_2)
+    }}\left\{
+\int c(x_1,y_1)\,d\pi_1 + \int c(x_2,y_2)\,d\pi_2 + \lambda \int (y_1-y_2)^2\,d\gamma
+\right\}.
+\end{equation*}
+% If $(pr_{y_1})_\#\pi_1=\nu_1=(pr_{y_1})_\#\gamma$ and $(pr_{y_2})_\#\gamma=\nu_2=(pr_{y_2})_\#\pi_2$, the triple $(\pi_1,\gamma,\pi_2)$ hascompatible marginals and we can apply the gluing lemma from e.g.,. lemma 5.5 in \textcite{Santambrogio2015}
+% By the gluing lemma, for any triple $(\pi_1,\gamma,\pi_2)$ with compatible marginals
+% there exists a probability measure $\Pi$ on $\mathcal X\times\mathcal X\times\mathbb R\times\mathbb R$
+% whose $(x_1,y_1)$-marginal is $\pi_1$, $(y_1,y_2)$-marginal is $\gamma$, and $(x_2,y_2)$-marginal is $\pi_2$.
+% Conversely, any such $\Pi$ defines $\pi_1,\pi_2,\gamma$ by marginalization.
+% Therefore
+% \begin{equation}\label{eq:Pi-form}
+% \inf(P_\lambda)
+% =
+% \inf_{\Pi\in\mathcal A}
+% \int_{\mathcal X^2\times\mathbb R^2}
+% \left(
+% c(x_1,y_1)+c(x_2,y_2)+\lambda (y_1-y_2)^2
+% \right)\,d\Pi,
+% \end{equation}
+% where $\mathcal A$ is the set of probability measures $\Pi$ on $\mathcal X^2\times\mathbb R^2$
+% such that $(\mathrm{pr}_{x_1})_\#\Pi=\mu^+$ and $(\mathrm{pr}_{x_2})_\#\Pi=\mu^-$.
+
+
+
+% \paragraph{Gluing.}
+% Let $\pi_1\in\Pi(\mu^+,\nu_1)$, $\gamma\in\Pi(\nu_1,\nu_2)$, and $\pi_2\in\Pi(\mu^-,\nu_2)$.
+% Equivalently, assume there exist random variables
+% \[
+% (X_1,Y_1)\sim \pi_1,\qquad (Y_1',Y_2)\sim \gamma,\qquad (X_2,Y_2')\sim \pi_2,
+% \]
+% such that $Y_1\sim \nu_1$ and $Y_2\sim \nu_2$, and moreover the shared marginals match:
+% \[
+% \Law(Y_1)=\Law(Y_1')=\nu_1,\qquad \Law(Y_2)=\Law(Y_2')=\nu_2.
+% \]
+% Then, by the gluing lemma, there exists a quadruple of random variables
+% \[
+% (X_1,X_2,Y_1,Y_2)\in \mathcal X\times\mathcal X\times\R\times\R
+% \]
+% with joint law $\Pi:=\Law(X_1,X_2,Y_1,Y_2)$ such that the pairwise marginals coincide with the
+% original couplings:
+% \[
+% \Law(X_1,Y_1)=\pi_1,\qquad \Law(Y_1,Y_2)=\gamma,\qquad \Law(X_2,Y_2)=\pi_2.
+% \]
+% Conversely, given any joint law $\Pi$ on $(X_1,X_2,Y_1,Y_2)$, one recovers feasible couplings by
+% marginalization
+% \[
+% \pi_1:=\Law(X_1,Y_1),\quad \gamma:=\Law(Y_1,Y_2),\quad \pi_2:=\Law(X_2,Y_2),
+% \quad\text{and}\quad
+% \nu_1:=\Law(Y_1),\ \nu_2:=\Law(Y_2).
+% \]
+% Therefore the relaxed objective can be written as a single expectation under $\Pi$:
+% \[
+% \inf(P_\lambda)
+% =
+% \inf_{\Pi\in\mathcal A}
+% \E_{\Pi}\!\left[c(X_1,Y_1)+c(X_2,Y_2)+\lambda (Y_1-Y_2)^2\right],
+% \]
+% where $\mathcal A$ denotes the set of probability measures $\Pi$ on
+% $\mathcal X\times\mathcal X\times\R\times\R$ such that $\Law(X_1)=\mu^+$ and $\Law(X_2)=\mu^-$.
+
+\paragraph{Gluing lemma.}
+Let $\pi_1\in\Pi(\mu^+,\nu_1)$, $\gamma\in\Pi(\nu_1,\nu_2)$, and $\pi_2\in\Pi(\mu^-,\nu_2)$, and assume the
+\emph{shared marginals are consistent}, i.e.
+\begin{equation*}
+  (\mathrm{pr}_{y_1})_\#\pi_1=(\mathrm{pr}_{y_1})_\#\gamma=\nu_1,
+\qquad
+(\mathrm{pr}_{y_2})_\#\gamma=(\mathrm{pr}_{y_2})_\#\pi_2=\nu_2.
+\end{equation*}
+
+One may view $\pi_1,\gamma,\pi_2$ as the laws of random pairs
+$(X_1,Y_1)$, $(Y_1,Y_2)$ and $(X_2,Y_2)$ whose overlaps $Y_1$ and $Y_2$ have the same distributions.
+By the gluing lemma (see, e.g., Lemma~5.5 in \textcite{Santambrogio2015}), there exists a probability measure
+$\Pi$ on $\mathcal X\times\mathcal X\times\R\times\R$ such that
+\begin{equation*}
+  (\mathrm{pr}_{x_1,y_1})_\#\Pi=\pi_1,\qquad
+(\mathrm{pr}_{y_1,y_2})_\#\Pi=\gamma,\qquad
+(\mathrm{pr}_{x_2,y_2})_\#\Pi=\pi_2.
+\end{equation*}
+
+Conversely, any such $\Pi$ determines feasible couplings by marginalization. Hence the relaxed objective can be
+expressed using a single joint law:
+\begin{equation}\label{eq:Pi-form}
+\inf(P_\lambda)
+=
+\inf_{\Pi\in\mathcal A}
+\int_{\mathcal X^2\times \R^2}
+\Big(
+c(x_1,y_1)+c(x_2,y_2)+\lambda (y_1-y_2)^2
+\Big)\,d\Pi,
+\end{equation}
+where $\mathcal A$ is the set of probability measures $\Pi$ on $\mathcal X^2\times\R^2$ such that
+$(\mathrm{pr}_{x_1})_\#\Pi=\mu^+$ and $(\mathrm{pr}_{x_2})_\#\Pi=\mu^-$.
+
+
+\paragraph{Step 2: reduce to pointwize optimization.}
+Let $\Pi\in\mathcal A$ and let $\pi:=(\mathrm{pr}_{x_1,x_2})_\#\Pi\in\Pi(\mu^+,\mu^-)$ (the $(X_1, X_2)$ marginal).
+We can write 
+\begin{align*}
+  \pi_1(dx_1,dy_1) &= \nu_1(dy_1) = \nu_1(dy_1)K_1(dx_1|y_1),\\
+  \pi_2(dx_2,dy_2) &= \nu_2(dy_2) = \nu_2(dy_2)K_2(dx_2|y_2),
+\end{align*}
+where $K_i(\cdot|y_i)$ are the corresponding conditional distributions of $X_i$ knowing $Y_i= y_i$.
+Then 
+\begin{equation*}
+  \Pi(dx_1,dx_2,dy_1,dy_2)
+  = \gamma(dy_1, dy_2)\,K_1(dx_1|y_1)\,K_2(dx_2|y_2).
+\end{equation*}
+\marie{on tire $(Y_1,Y_2) \sim \gamma$, puis $X_1|Y_1 \sim K_1(\cdot|Y_1)$ et $X_2|Y_2 \sim K_2(\cdot|Y_2)$ à partir de $\pi_i$ indépendamment suivant $y_1, Y_2$.}\\
+Thereforen, there exists a Markov kernel (i.e., measurable map) $K_{x_1,x_2}$ on $\mathbb R^2$ such that
+\begin{equation*}
+  \Pi(dx_1,dx_2,dy_1,dy_2)=\pi(dx_1,dx_2)\,K_{x_1,x_2}(dy_1,dy_2).
+\end{equation*}
+
+Write the integrand as
+\begin{equation*}
+  L(x_1,x_2;y_1,y_2):=
+c(x_1,y_1)+c(x_2,y_2)+\lambda (y_1-y_2)^2.
+\end{equation*}
+
+Then \eqref{eq:Pi-form} becomes
+\[
+\int_{\mathcal X^2}\left(\int_{\mathbb R^2} L(x_1,x_2;y_1,y_2)\,dK_{x_1,x_2}(y_1,y_2)\right)\,d\pi(x_1,x_2).
+\]
+For each fixed $(x_1,x_2)$, the map $(y_1,y_2)\mapsto L(x_1,x_2;y_1,y_2)$ is a strictly convex quadratic.
+Hence, for any probability measure $K$ on $\mathbb R^2$,
+\[
+\int L\,dK \;\ge\; \inf_{(y_1,y_2)\in\mathbb R^2} L(x_1,x_2;y_1,y_2),
+\]
+with equality achieved by choosing $K$ as a Dirac mass at the unique minimizer $\delta_{(y_1^*, y_2*)}$.
+Then for a fixed couple $(x_1, x_2)$ the conditional distribution of $(Y_1,Y_2)$ given $(X_1,X_2)=(x_1,x_2)$ that minimizes the inner integral is the Dirac mass at the unique minimizer of $L(x_1,x_2;\cdot,\cdot)$. 
+We have
+\begin{equation*}
+  C_\lambda(x_1,x_2)
+  :=
+  \inf_{y_1,y_2\in\mathbb R}
+  L(x_1,x_2;y_1,y_2)
+\end{equation*}
+Therefore, for a fixed $\pi\in\Pi(\mu^+,\mu^-)$, the optimization over $\Pi\in\mathcal A$ with this marginal reduces tp an optimization over the kernels $\{K_{x_1,x_2}\}$, and we have 
+% \begin{equation*}
+%   \int_{\mathcal X^2}\underbrace{\left(\int_{\mathbb R^2} L(x_1,x_2;\;\cdot \;)\,dK_{x_1,x_2}(y_1,y_2)\right)}\,d\pi(x_1,x_2)
+% \end{equation*}
+
+\begin{equation*}
+  \int_{\mathcal X^2}
+  \left(
+  \tikzmarknode[fill=targetGreen!75,
+               rounded corners=0.4ex,
+               inner xsep=0.7ex,
+               inner ysep=0.3ex]{innerK}
+  {\displaystyle \int_{\mathbb R^2} L(x_1,x_2;\,\cdot\,)\,dK_{x_1,x_2}(y_1,y_2)}
+  \right)
+  \,d\pi(x_1,x_2).
+  \end{equation*}
+  
+  \begin{tikzpicture}[overlay,remember picture,
+    >=Stealth,
+    every node/.style={font=\small}]
+    \node[below=1.4em of innerK.south, anchor=south, text=targetGreen!70!black] (labK)
+      {depends only on $K_{x_1,x_2}$};
+  \end{tikzpicture}
+
+  Thus we can minimize the inner integral pointwise. At a fixed $\pi\in\Pi(\mu^+,\mu^-)$ we have that the best kernel choise is 
+  \begin{equation*}
+    K_{x_1,x_2} = \delta_{(y_1^*(x_1,x_2) \;, \;y_2^*(x_1,x_2))},
+  \end{equation*}
+  where $(y_1^*(x_1,x_2),y_2^*(x_1,x_2))$ is the unique minimizer of $L(x_1,x_2;\cdot,\cdot)$.
+We went from an optimization over $\Pi\in\mathcal A$ with fixed $(\mathrm{pr}_{x_1,x_2})_\#\Pi=\pi$ to a pointwise minimization for each $\pi$ where we know the optimal kernel. 
+Hence
+\begin{equation*}
+  \inf_{\Pi\in\mathcal A:\;(\mathrm{pr}_{x_1,x_2})_\#\Pi=\pi}\;
+  \int L\,d\Pi
+  \int_{\mathcal X^2}
+  \underbrace{\left(
+    % \inf_{y_1,y_2\in\mathbb R}
+    L(x_1,x_2;y_1,y_2)
+    \right)}_{C_\lambda(x_1,x_2)}
+  \,d\pi(x_1,x_2).
+\end{equation*}
+  
+where $C_\lambda$ is defined in \eqref{eq:Clambda-def}.
+Taking the infimum over $\pi\in\Pi(\mu^+,\mu^-)$ yields \eqref{eq:OT-reduced}.
+
+\paragraph{Step 3: closed form.}
+Fix $x_i=(h_i,a_i)$ and minimize
+\begin{equation*}
+  \Phi(y_1,y_2)=\frac{(h_1-y_1)^2}{a_1}+\frac{(h_2-y_2)^2}{a_2}+\lambda (y_1-y_2)^2.
+\end{equation*}
+
+First-order optimality gives
+\[ 
+\begin{cases}
+  \frac{2(y_1-h_1)}{a_1}+2\lambda(y_1-y_2)&=0,\\
+\frac{2(y_2-h_2)}{a_2}-2\lambda(y_1-y_2)&=0.
+\end{cases}
+\]
+
+Solving the system yields \eqref{eq:y-star}.
+Let $u:=y_1^*-y_2^*$. From the optimality conditions we also have
+\[
+\begin{cases}
+  y_1^*-h_1&=-\lambda a_1 u,\\
+  y_2^*-h_2&=\lambda a_2 u,
+\end{cases}
+\]
+and subtracting these identities gives
+\begin{equation*}
+  u=(y_1^*-y_2^*)=(h_1-h_2)-\lambda(a_1+a_2)u,
+\end{equation*}
+
+and then
+\begin{equation*}
+  u=\frac{h_1-h_2}{1+\lambda(a_1+a_2)}.
+\end{equation*}
+
+
+Plugging into $\Phi$ at optimum:
+\begin{align*}
+  C_\lambda(x_1,x_2)
+&=\Phi(y_1^*,y_2^*), \\
+&=
+\frac{(\lambda a_1 u)^2}{a_1}+\frac{(\lambda a_2 u)^2}{a_2}+\lambda u^2, \\
+&=
+\lambda u^2\big(1+\lambda(a_1+a_2)\big),
+\end{align*}
+
+hence
+\begin{align*}
+  C_\lambda(x_1,x_2)
+&=
+\lambda \frac{(h_1-h_2)^2}{(1+\lambda(a_1+a_2))^2}\,(1+\lambda(a_1+a_2)), \\
+&=
+\frac{\lambda}{1+\lambda(a_1+a_2)}(h_1-h_2)^2,
+\end{align*}
+
+which is \eqref{eq:Clambda-closed}.
+\end{proof}
+
+% \begin{remark}[Reconstruction of $(\nu_1^*,\nu_2^*)$ from an optimal coupling]
+% Let $\pi^*\in\Pi(\mu^+,\mu^-)$ be optimal for \eqref{eq:OT-reduced} and define the maps
+% $T_1(x_1,x_2):=y_1^*(x_1,x_2)$ and $T_2(x_1,x_2):=y_2^*(x_1,x_2)$ from \eqref{eq:y-star}.
+% Then an optimal solution of \eqref{eq:P-lambda} is obtained by
+% \[
+% \nu_1^* = (T_1)_\#\pi^*,
+% \qquad
+% \nu_2^* = (T_2)_\#\pi^*,
+% \]
+% and the optimal $W_2$-coupling between $\nu_1^*$ and $\nu_2^*$ is simply the pushforward
+% of $\pi^*$ by $(T_1,T_2)$.
+% \end{remark}
+
+\begin{remark}[Sanity check for compatiblity wih he unrelaxed solution]\label{rem:lambda_to_infty}
+  Consider the relaxed objective \eqref{eq:P-lambda} and its reduced OT form \eqref{eq:OT-reduced} with
+  \begin{equation*}
+      C_\lambda(x_1,x_2)=\inf_{y_1,y_2}\Big\{c(x_1,y_1)+c(x_2,y_2)+\lambda(y_1-y_2)^2\Big\}.
+    \end{equation*}
+
+  Let $x_i=(h_i,a_i)$ with $a_i>0$. The inner minimization admits the explicit minimizer
+  $(y_1^*(x_1,x_2),y_2^*(x_1,x_2))$ given in \eqref{eq:y-star}, and one checks that
+  \begin{equation}\label{eq:collapse_y1y2}
+  y_1^*(x_1,x_2)-y_2^*(x_1,x_2)=\frac{h_1-h_2}{1+\lambda(a_1+a_2)}\xrightarrow[\lambda\to\infty]{}0,
+  \end{equation}
+  and moreover
+  \begin{equation}\label{eq:collapse_to_bary}
+  y_1^*(x_1,x_2),\ y_2^*(x_1,x_2)
+  \xrightarrow[\lambda\to\infty]{}
+  \frac{a_2h_1+a_1h_2}{a_1+a_2}
+  =:y^\star(x_1,x_2),
+  \end{equation}
+  where $y^\star(x_1,x_2)$ is exactly the minimizer of the unrelaxed two-to-one collapse
+  $\inf_{y}\{c(x_1,y)+c(x_2,y)\}$.
+  
+  At the level of pairwise costs, the closed form \eqref{eq:Clambda-closed} yields the pointwise convergence
+  \begin{equation*}
+  C_\lambda(x_1,x_2)=\frac{\lambda}{1+\lambda(a_1+a_2)}(h_1-h_2)^2
+  \;\xrightarrow[\lambda\to\infty]{}\;
+  \frac{(h_1-h_2)^2}{a_1+a_2}
+  =:C_\infty(x_1,x_2),
+\end{equation*}
+
+  which is precisely the unrelaxed OT cost. In particular, if $V_\lambda$ denotes the optimal value of
+  \eqref{eq:OT-reduced}, then $V_\lambda$ is nondecreasing in $\lambda$ and satisfies
+  $V_\lambda\uparrow V_\infty$ as $\lambda\to\infty$, where $V_\infty$ is the optimal value of the
+  unrelaxed problem.
+  
+  Finally, let $\pi_\lambda^*\in\Pi(\mu^+,\mu^-)$ be an optimal coupling for the reduced problem
+\eqref{eq:OT-reduced}, and define the associated optimal outputs by
+\begin{equation*}
+  Y_{1,\lambda}:=T_{1,\lambda}(X_1,X_2),\qquad Y_{2,\lambda}:=T_{2,\lambda}(X_1,X_2),
+\qquad (X_1,X_2)\sim \pi_\lambda^*,
+\end{equation*}
+
+so that $\nu_{1,\lambda}^*=\Law(Y_{1,\lambda})=(T_{1,\lambda})_\#\pi_\lambda^*$ and
+$\nu_{2,\lambda}^*=\Law(Y_{2,\lambda})=(T_{2,\lambda})_\#\pi_\lambda^*$.
+Consider moreover the coupling between these two output laws induced by the same construction,
+\begin{equation*}
+  \gamma_\lambda:=(T_{1,\lambda},T_{2,\lambda})_\#\pi_\lambda^*\in\Pi(\nu_{1,\lambda}^*,\nu_{2,\lambda}^*).
+\end{equation*}
+
+By definition of $W_2$ we have
+\begin{align*}
+  W_2^2(\nu_{1,\lambda}^*,\nu_{2,\lambda}^*)
+&\;\le\;
+\int_{\R^2} (y_1-y_2)^2\,d\gamma_\lambda(y_1,y_2), \\
+&\;=\;
+\E_{\pi_\lambda^*}\!\big[(Y_{1,\lambda}-Y_{2,\lambda})^2\big].
+\end{align*}
+
+Using the explicit formula \eqref{eq:collapse_y1y2}, we obtain that
+$Y_{1,\lambda}-Y_{2,\lambda}\to 0$ pointwise in $(x_1,x_2)$ as $\lambda\to\infty$, and hence (under the
+usual integrability ensured here by the quadratic structure) the right-hand side vanishes as $\lambda\to\infty$.
+In particular, the two output laws become arbitrarily close in $W_2$:
+\begin{equation*}
+  W_2(\nu_{1,\lambda}^*,\nu_{2,\lambda}^*)\xrightarrow[\lambda\to\infty]{}0.
+\end{equation*}
+
+Therefore the relaxed solutions asymptotically enforce a single common output distribution; if the unrelaxed
+barycenter is unique, this common limit must coincide with the unrelaxed barycenter law.
+
+  
+  \end{remark}
+
+
 \newpage
+\printbibliography
+
+
+
 
 
 \end{document}
