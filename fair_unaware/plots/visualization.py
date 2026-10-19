@@ -1,9 +1,13 @@
+from os import name
+from cv2 import log
 import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib.colors import LogNorm
 from scipy.stats import gaussian_kde
 import math
+import pandas as pd
+
 
 
 def plot_eta_delta_scatter(eta, delta, S, ax=None, title="(eta, delta) scatter"):
@@ -59,7 +63,6 @@ def scatter_XY_colored_by_S(
     if not (len(Y) == n and len(S) == n):
         raise ValueError(f"Length mismatch: X has n={n}, len(Y)={len(Y)}, len(S)={len(S)}")
 
-    # --- create axes grid if needed ---
     if axes is None:
         ncols = min(max_cols, d)
         nrows = int(math.ceil(d / ncols))
@@ -69,7 +72,6 @@ def scatter_XY_colored_by_S(
             sharey=sharey
         )
     else:
-        # accept 1D/2D arrays or lists
         axes = np.array(axes, dtype=object)
         fig = axes.ravel()[0].figure
 
@@ -99,11 +101,11 @@ def scatter_XY_colored_by_S(
         if legend == "single" and legend_handles is None:
             legend_handles, legend_labels = ax.get_legend_handles_labels()
 
-    #turn off unused axes to avoid empty plots
+
     for k in range(d, len(axes)):
         axes[k].axis("off")
 
-    #single shared legend
+
     if legend == "single" and legend_handles is not None:
         fig.legend(
             legend_handles, legend_labels,
@@ -147,25 +149,24 @@ def plot_eta_delta_with_transport_lines(
 
     n_plus = h_plus.shape[0]
 
-    # --- base scatter for plus / minus supports ---
+
     ax.scatter(h_plus, d_plus, label="plus (Δ>0)", alpha=0.7)
     ax.scatter(h_minus, d_minus, label="minus (Δ<0)", alpha=0.7)
 
     if pi.size > 0:
-        # main partner j* and its mass
-        j_star = np.argmax(pi, axis=1)  # shape (n_plus,)
+
+        j_star = np.argmax(pi, axis=1)  
         main_mass = pi[np.arange(n_plus), j_star]
         max_mass = main_mass.max() if main_mass.max() > 0 else 1.0
 
-        # candidates: all plus indices
         idx_plus = np.arange(n_plus)
 
-        # 1) keep only plus points with sufficiently large main_mass
+        #keep only plus points with sufficiently large main_mass
         if min_mass_quantile is not None:
             thresh = np.quantile(main_mass, min_mass_quantile)
             idx_plus = idx_plus[main_mass >= thresh]
 
-        # 2) random subsampling if still too many
+        #random subsampling if still too many
         if max_lines is not None and len(idx_plus) > max_lines:
             rng = np.random.RandomState(0)  # deterministic for reproducibility
             idx_plus = rng.choice(idx_plus, size=max_lines, replace=False)
@@ -251,11 +252,11 @@ def plot_predictions_barycenter_links(
     if len(groups) != 2:
         raise ValueError("plot_predictions_barycenter_links is designed for exactly 2 groups.")
 
-    # vertical positions for the two groups and the barycenter
+
     y_pos = {groups[0]: 0.0, groups[1]: 1.0}
     y_bary = 0.5
 
-    # --- scatter of base predictions per group, with vertical jitter ---
+
     y_scatter = np.empty_like(eta, dtype=float)
     for idx, g in enumerate(groups):
         mask = (S == g)
@@ -268,7 +269,7 @@ def plot_predictions_barycenter_links(
             label=f"S={g}",
         )
 
-    # --- histogram of fair predictions (barycenter) at y = y_bary ---
+
     hist, bin_edges = np.histogram(f_fair, bins=n_bins)
     bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
     if len(bin_centers) > 1:
@@ -294,22 +295,21 @@ def plot_predictions_barycenter_links(
         )
         ax.add_patch(rect)
 
-    # --- decide which points get a line ---
+
     n = len(eta)
     idx_all = np.arange(n)
 
-    # filter by shift magnitude
+
     if min_shift_quantile is not None:
         shifts = np.abs(eta - f_fair)
         thresh = np.quantile(shifts, min_shift_quantile)
         idx_all = idx_all[shifts >= thresh]
 
-    # subsample if too many
+
     if max_lines is not None and len(idx_all) > max_lines:
         rng = np.random.RandomState(0)
         idx_all = rng.choice(idx_all, size=max_lines, replace=False)
 
-    # --- connect each selected point to the barycenter bin ---
     bin_idx = np.digitize(f_fair, bin_edges) - 1
     bin_idx = np.clip(bin_idx, 0, n_bins - 1)
 
@@ -339,7 +339,6 @@ def plot_prediction_distributions(y_base, y_fair, S, ax=None, title="Predictions
     S = np.asarray(S)
     groups = np.unique(S)
 
-    # Common x-grid covering both base and fair ranges
     data_min = y_base.min() if y_fair is None else min(y_base.min(), y_fair.min())
     data_max = y_base.max() if y_fair is None else max(y_base.max(), y_fair.max())
     x = np.linspace(data_min, data_max, 512)
@@ -350,25 +349,56 @@ def plot_prediction_distributions(y_base, y_fair, S, ax=None, title="Predictions
         # KDE for base
         if np.sum(mask) > 1:
             kde_base = gaussian_kde(y_base[mask])
-            ax.plot(x, kde_base(x), alpha=0.8, label=f"base, S={g}")
+            ax.plot(x, kde_base(x), alpha=0.8, label=f"ERM Unfair, S={g}")
         else:
-            # fallback: single point -> show as vertical line
-            ax.axvline(y_base[mask][0], color="C0", alpha=0.5, label=f"base, S={g}")
+            ax.axvline(y_base[mask][0], color="C0", alpha=0.5, label=f"ERM Unfair, S={g}")
 
         # KDE for fair
         if y_fair is not None:
             if np.sum(mask) > 1:
                 kde_fair = gaussian_kde(y_fair[mask])
-                ax.plot(x, kde_fair(x), alpha=0.8, linestyle="--", label=f"fair, S={g}")
+                ax.plot(x, kde_fair(x), alpha=0.8, linestyle="--", label=f"OT Unaware, S={g}")
             else:
-                ax.axvline(y_fair[mask][0], color="C1", alpha=0.5, linestyle="--", label=f"fair, S={g}")
+                ax.axvline(y_fair[mask][0], color="C1", alpha=0.5, linestyle="--", label=f"OT Unaware, S={g}")
 
     ax.set_xlabel("prediction")
     ax.set_ylabel("density")
-    #no y ticks
+
     ax.set_yticks([])
-    #no x ticks
+
     ax.set_xticks([])
+    ax.set_title(title)
+    ax.legend()
+    return ax
+
+
+def plot_prediction_ecdf(y_base, y_fair, S, ax=None, title="Predictions by group (ECDF)"):
+    if ax is None:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots()
+
+    y_base = np.asarray(y_base).ravel()
+    y_fair = None if y_fair is None else np.asarray(y_fair).ravel()
+    S = np.asarray(S).ravel()
+    groups = np.unique(S)
+
+    def _ecdf(vals):
+        vals = np.sort(vals)
+        n = len(vals)
+        y = np.arange(1, n + 1) / n
+        return vals, y
+
+    for g in groups:
+        mask = (S == g)
+        xb, yb = _ecdf(y_base[mask])
+        ax.plot(xb, yb, label=f"ERM Unfair, S={g}", alpha=0.9)
+
+        if y_fair is not None:
+            xf, yf = _ecdf(y_fair[mask])
+            ax.plot(xf, yf, linestyle="--", label=f"OT Unaware, S={g}", alpha=0.9)
+
+    ax.set_xlabel("prediction")
+    ax.set_ylabel("ECDF")
     ax.set_title(title)
     ax.legend()
     return ax
@@ -395,7 +425,6 @@ def plot_transport_plan(
     if ax_cost is None or ax_plan is None:
         fig, (ax_cost, ax_plan) = plt.subplots(1, 2, figsize=(10, 4))
 
-    # --- optional sorting by eta to make structure visible ---
     if h_plus is not None:
         h_plus = np.asarray(h_plus)
         idx_plus = np.argsort(h_plus)
@@ -411,14 +440,11 @@ def plot_transport_plan(
     C_sorted = C[np.ix_(idx_plus, idx_minus)]
     pi_sorted = pi[np.ix_(idx_plus, idx_minus)]
 
-    # --- cost matrix plot ---
     im0 = ax_cost.imshow(C_sorted, aspect="auto")
     ax_cost.set_title("Cost matrix C (sorted)")
     plt.colorbar(im0, ax=ax_cost, fraction=0.046, pad=0.04)
 
-    # --- transport plan plot (log scale by default) ---
     if use_log:
-        # avoid log(0): get positive entries to set vmin/vmax
         positive = pi_sorted[pi_sorted > 0]
         if positive.size > 0:
             vmin = max(positive.min(), 1e-6)
@@ -438,24 +464,6 @@ def plot_transport_plan(
     plt.colorbar(im1, ax=ax_plan, fraction=0.046, pad=0.04)
 
     return ax_cost, ax_plan
-
-# def plot_transport_plan(C, pi, ax_cost=None, ax_plan=None):
-#     """
-#     Simple heatmaps for cost matrix C and transport plan pi.
-#     """
-#     if ax_cost is None or ax_plan is None:
-#         fig, (ax_cost, ax_plan) = plt.subplots(1, 2, figsize=(10, 4))
-
-#     im0 = ax_cost.imshow(C, aspect="auto")
-#     ax_cost.set_title("Cost matrix C")
-#     plt.colorbar(im0, ax=ax_cost, fraction=0.046, pad=0.04)
-
-#     im1 = ax_plan.imshow(pi, aspect="auto")
-#     ax_plan.set_title("Transport plan pi")
-#     plt.colorbar(im1, ax=ax_plan, fraction=0.046, pad=0.04)
-
-#     return ax_cost, ax_plan
-
 
 def plot_rank_reordering(eta, y_fair, S, group, ax=None, title=None):
     """
@@ -504,7 +512,6 @@ def plot_base_vs_fair_scatter(y_base, y_fair, S, ax=None, title="Base vs fair pr
         mask = (S == g)
         ax.scatter(y_base[mask], y_fair[mask], alpha=0.5, label=f"S={g}")
 
-    # diagonal y = x 
     lo = min(y_base.min(), y_fair.min())
     hi = max(y_base.max(), y_fair.max())
     ax.plot([lo, hi], [lo, hi], "k--", linewidth=1)
@@ -553,28 +560,13 @@ def aggregate_plan_by_eta_bins(pi, h_plus, h_minus, n_bins=10):
     pi = np.asarray(pi)
     h_plus = np.asarray(h_plus)
     h_minus = np.asarray(h_minus)
-
-    # Common bin edges over all eta values (plus + minus)
-    # all_h = np.concatenate([h_plus, h_minus])
-    # bin_edges = np.quantile(all_h, np.linspace(0.0, 1.0, n_bins + 1))
-
-    #     # clip just in case numerical issues put something at n_bins
-    # plus_bins = np.clip(plus_bins, 0, n_bins - 1)
-    # minus_bins = np.clip(minus_bins, 0, n_bins - 1)
-
-
-    # # Digitize into bins [0..n_bins-1]
-    # plus_bins = np.digitize(h_plus, bin_edges) - 1
-    # minus_bins = np.digitize(h_minus, bin_edges) - 1
-
-        # Separate quantile bins for plus and minus (like independent sorting)
     bin_edges_plus = np.quantile(h_plus,  np.linspace(0.0, 1.0, n_bins + 1))
     bin_edges_minus = np.quantile(h_minus, np.linspace(0.0, 1.0, n_bins + 1))
 
     plus_bins = np.digitize(h_plus, bin_edges_plus) - 1
     minus_bins = np.digitize(h_minus, bin_edges_minus) - 1
 
-    # DEBUG RETIRER APR7S clip just in case something falls exactly on the last edge
+    # DEBUG clip just in case something falls exactly on the last edge
     plus_bins = np.clip(plus_bins, 0, n_bins - 1)
     minus_bins = np.clip(minus_bins, 0, n_bins - 1)
 
@@ -587,7 +579,7 @@ def aggregate_plan_by_eta_bins(pi, h_plus, h_minus, n_bins=10):
             if 0 <= bi < n_bins and 0 <= bj < n_bins:
                 agg[bi, bj] += row[j]
 
-    return agg, bin_edges_plus, bin_edges_minus #bin_edges
+    return agg, bin_edges_plus, bin_edges_minus 
 
 
 def plot_aggregated_plan_by_eta(pi, h_plus, h_minus, n_bins=10, ax=None,
@@ -604,26 +596,20 @@ def plot_aggregated_plan_by_eta(pi, h_plus, h_minus, n_bins=10, ax=None,
     if ax is None:
         fig, ax = plt.subplots()
 
-    # agg, bin_edges = aggregate_plan_by_eta_bins(pi, h_plus, h_minus, n_bins=n_bins)
 
     agg, bin_edges_plus, bin_edges_minus = aggregate_plan_by_eta_bins(
         pi, h_plus, h_minus, n_bins=n_bins
     )
 
-    # im = ax.imshow(agg, origin="lower", aspect="auto")
     im = ax.imshow(agg, origin="upper", aspect="auto")
     ax.set_title(title)
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-    #
-    # centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
     centers_plus = 0.5 * (bin_edges_plus[:-1] + bin_edges_plus[1:])
     centers_minus = 0.5 * (bin_edges_minus[:-1] + bin_edges_minus[1:])
     tick_idx = np.linspace(0, n_bins - 1, min(n_bins, 5), dtype=int)
     ax.set_xticks(tick_idx)
     ax.set_yticks(tick_idx)
-    # ax.set_xticklabels([f"{centers[i]:.2f}" for i in tick_idx], rotation=45)
-    # ax.set_yticklabels([f"{centers[i]:.2f}" for i in tick_idx])
     ax.set_yticklabels([f"{centers_plus[i]:.2f}" for i in tick_idx])
     ax.set_xticklabels([f"{centers_minus[i]:.2f}" for i in tick_idx], rotation=45)
 
@@ -691,23 +677,20 @@ def plot_cost_preference_for_x1(
     h_minus = np.asarray(h_minus)
     d_minus = np.asarray(d_minus)
 
-    # Fixed source point x1 = (h1, d1)
 
     h1 = h_plus[i_plus]
     d1 = d_plus[i_plus]
 
-    # Compute costs from x1 to ALL minus points
     denom = np.abs(d1) + np.abs(d_minus) + 1e-12
     costs = (h_minus - h1) ** 2 / denom
 
-    # Choose reference x_ref = x3
     if j_ref is None:
-        j_ref = np.argmin(costs)  # cheapest minus point for x1
+        j_ref = np.argmin(costs)  
     cost_ref = costs[j_ref]
 
     # Region indicator: where c(x1, x) > c(x1, x_ref)
-    mask_high = costs > cost_ref  # "more expensive than reference"
-    mask_low = ~mask_high         # "cheaper or equal"
+    mask_high = costs > cost_ref  #
+    mask_low = ~mask_high         
 
     # Plot minus points in (eta, delta)-space
     ax.scatter(
@@ -939,7 +922,7 @@ def plot_min_cost_hard_vs_easy(
     q = np.quantile(c_min, quantile)
     hard = c_min >= q
 
-    # easy points in light grey
+
     ax.scatter(
         h_plus[~hard],
         d_plus[~hard],
@@ -993,7 +976,6 @@ def plot_min_cost_easy_only(
 
     c_easy = c_min[easy]
 
-    # handle log scale
     positive = c_easy[c_easy > 0]
     if positive.size > 0:
         min_pos = positive.min()
@@ -1140,7 +1122,6 @@ def plot_gamma_sweep(rows, save_path=None):
     dp_b  = [r["dp_base"] for r in rows]
     dp_f  = [r["dp_fair"] for r in rows]
 
-    # side-by-side subplots
     fig, axes = plt.subplots(1, 2, figsize=(10, 4), sharex=True)
 
     axes[0].plot(gam, mse_b, marker="o", label="base")
@@ -1165,7 +1146,361 @@ def plot_gamma_sweep(rows, save_path=None):
 
 
 
+def plot_gamma_sweep_multi(
+    rows, save_path, *,
+    x_key="gamma",
+    dp_keys=("w2_base", "w2_ot", "w2_aware", "w2_fairreg", "w2_frappe", "w2_shat"),
+    mse_keys=("mse_base", "mse_ot", "mse_aware", "mse_fairreg", "mse_frappe", "mse_shat"),
+    dp_base_key="w2_base",
+    mse_base_key="mse_base",
+    relative=True,         
+    relative_mode="pct",    # "pct" or "ratio"
+    eps=1e-12,
+    marker=None,           
+    title_prefix="Confounded sweep",
+    dp_ylabel=r"$W_2$",
+    log_x=True,
+    log_y=True,
+    labels_dict=None,     
+    colors_dict=None,
+    linestyles_dict=None,
+):
+    
+    df = pd.DataFrame(rows)
+
+    def _rel(y, base):
+        base_safe = np.maximum(np.abs(base), eps)
+        if relative_mode == "ratio":
+            return y / base_safe
+        if relative_mode == "pct":
+            return 100.0 * (y - base) / base_safe
+        raise ValueError("relative_mode must be 'pct' or 'ratio'")
+
+    if relative:
+        for k in dp_keys:
+            df[k] = _rel(df[k], df[dp_base_key])
+        for k in mse_keys:
+            df[k] = _rel(df[k], df[mse_base_key])
+
+    df_mean = df.groupby(x_key).mean().reset_index()
+    df_std = df.groupby(x_key).std().reset_index()
+    df_count = df.groupby(x_key).count().reset_index()
+    df_ci = 1.96 * df_std / np.sqrt(df_count)
+
+    gammas = df_mean[x_key].values
+
+    name_map = labels_dict if labels_dict is not None else {}
+    color_map = colors_dict if colors_dict is not None else {}
+
+    # COMBINED FIGURE for the paper 
+    fig, axes = plt.subplots(1, 2, figsize=(8.5, 3.2)) 
+
+    # MSE Plot (Left) 
+    ax_mse = axes[0]
+    for k in mse_keys:
+        y_mean = df_mean[k].values
+        y_ci = df_ci[k].values
+        raw_name = k.replace("mse_", "")
+        
+        label = name_map.get(raw_name, raw_name)
+        color = color_map.get(raw_name, None)
+        ls = linestyles_dict.get(raw_name, None) if linestyles_dict else '-'
+        
+        line, = ax_mse.plot(gammas, y_mean, marker=marker, label=label, color=color, linestyle=ls)
+        ax_mse.fill_between(gammas, y_mean - y_ci, y_mean + y_ci, color=line.get_color(), alpha=0.2)
+    
+    if log_x: ax_mse.set_xscale("log")
+    if log_y: ax_mse.set_yscale("log")
+    ax_mse.set_xlabel(r"$\gamma$")
+    ax_mse.set_ylabel("MSE" if not relative else ("MSE / base" if relative_mode == "ratio" else "% change of MSE vs base"))
+    ax_mse.set_title(r"MSE vs $\gamma$")
+    ax_mse.grid(True, alpha=0.3)
+
+    # W2 Plot (Right) 
+    ax_w2 = axes[1]
+    for k in dp_keys:
+        y_mean = df_mean[k].values
+        y_ci = df_ci[k].values
+        raw_name = k.replace("w2_", "").replace("dp_", "").replace("var_", "")
+        
+        label = name_map.get(raw_name, raw_name)
+        color = color_map.get(raw_name, None)
+        ls = linestyles_dict.get(raw_name, None) if linestyles_dict else '-'
+        
+        line, = ax_w2.plot(gammas, y_mean, marker=marker, label=label, color=color, linestyle=ls)
+        ax_w2.fill_between(gammas, y_mean - y_ci, y_mean + y_ci, color=line.get_color(), alpha=0.2)
+        
+    if log_y: ax_w2.set_yscale("log")
+    ax_w2.set_xscale("log" if log_x else "linear")
+    ax_w2.set_xlabel(r"$\gamma$")
+    ax_w2.set_ylabel(dp_ylabel if not relative else (f"{dp_ylabel} / base" if relative_mode == "ratio" else f"% change of {dp_ylabel} vs base"))
+    ax_w2.set_title(f"{dp_ylabel} vs "+r"$\gamma$")
+    ax_w2.grid(True, alpha=0.3)
+
+
+    handles, labels = ax_mse.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.98, 0.5))
 
 
 
+    fig.tight_layout()
+    fig.subplots_adjust(right=0.96) 
 
+
+    suffix = "_rel" if relative else "_abs"
+    combined_path = str(save_path).replace(".pdf", f"{suffix}_combined.pdf")
+    fig.savefig(combined_path, bbox_inches="tight")
+    plt.close(fig)
+
+    return combined_path
+
+
+def plot_gamma_sweep_relative_curves(
+    rows,
+    save_path=None,
+    *,
+    x_key="gamma",
+    mse_base_key="mse_base",
+    w2_base_key="w2_base",
+    relative="pct",   # "pct" or "ratio"
+    eps=1e-3,
+    title_prefix="Confounded sweep",
+    log_x=True,
+    log_y=True,
+):
+    """
+    Plots (relative MSE vs gamma) and (relative W2 vs gamma) as curves with 95% CI.
+    Relative is computed w.r.t. the base at the SAME gamma for each run.
+    """
+
+    df = pd.DataFrame(rows)
+
+
+    keys = list(df.columns)
+    mse_keys = [k for k in keys if k.startswith("mse_") and k != mse_base_key]
+    w2_keys  = [k for k in keys if k.startswith("w2_") and k != w2_base_key]
+
+    def _rel(y, base):
+        base_safe = np.maximum(np.abs(base), eps)
+        if relative == "ratio":
+            return y / base_safe
+        if relative == "pct":
+            return 100.0 * (y - base) / base_safe
+        raise ValueError("relative must be 'pct' or 'ratio'")
+
+
+    for k in mse_keys:
+        df[k] = _rel(df[k], df[mse_base_key])
+    for k in w2_keys:
+        df[k] = _rel(df[k], df[w2_base_key])
+
+
+    df_mean = df.groupby(x_key).mean().reset_index()
+    df_std = df.groupby(x_key).std().reset_index()
+    df_count = df.groupby(x_key).count().reset_index()
+
+    # Calculate 95% CI
+    df_ci = (1.96 * df_std / np.sqrt(df_count)).fillna(0.0)
+
+    gammas = df_mean[x_key].values
+    name_map = {
+        "base": "ERM", 
+        "ot": "FAUST-U", 
+        "aware": "FAUST-A", 
+        "fairreg": "FairReg", 
+        "frappe": "FRAPPÉ", 
+        "shat": "Plug-In W2"
+    }
+
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4), sharex=True)
+
+    if log_x:
+        axes[0].set_xscale("log")
+        axes[1].set_xscale("log")
+    if log_y:
+        axes[0].set_yscale("log")
+        axes[1].set_yscale("log")
+
+    # MSE relative 
+    for k in mse_keys:
+        y_mean = df_mean[k].values
+        y_ci = df_ci[k].values
+        raw_name = k.replace("mse_", "")
+        
+        line, = axes[0].plot(gammas, y_mean, label=name_map.get(raw_name, raw_name))  
+        axes[0].fill_between(gammas, y_mean - y_ci, y_mean + y_ci, alpha=0.2, color=line.get_color())
+
+    axes[0].set_xlabel(r"$\gamma$")
+    axes[0].set_title("Relative MSE vs $\\gamma$")
+    axes[0].set_ylabel("MSE / base" if relative == "ratio" else "% change vs base")
+    axes[0].grid(True, alpha=0.3)
+    axes[0].legend(frameon=False)
+
+    # W2 relative 
+    for k in w2_keys:
+        y_mean = df_mean[k].values
+        y_ci = df_ci[k].values
+        raw_name = k.replace("w2_", "")
+        
+        line, = axes[1].plot(gammas, y_mean, label=name_map.get(raw_name, raw_name))  
+        axes[1].fill_between(gammas, y_mean - y_ci, y_mean + y_ci, alpha=0.2, color=line.get_color())
+
+    axes[1].set_xlabel(r"$\gamma$")
+    axes[1].set_title("Relative $W_2$ vs $\\gamma$")
+    axes[1].set_ylabel(r"$W_2$ / base" if relative == "ratio" else "% change vs base")
+    axes[1].grid(True, alpha=0.3)
+    axes[1].legend(frameon=False)
+
+
+    fig.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, bbox_inches="tight")
+        plt.close(fig)
+    return fig
+
+def plot_mse_vs_w2_tradeoff(
+    rows,
+    save_path=None,
+    *,
+    x_key="gamma",
+    w2_keys=("w2_base", "w2_ot", "w2_aware", "w2_fairreg", "w2_frappe", "w2_shat"),
+    mse_keys=("mse_base", "mse_ot", "mse_aware", "mse_fairreg", "mse_frappe", "mse_shat"),
+    title="Accuracy vs Fairness Trade-off",
+    w2_max=1.5,
+    mse_max=None,
+    labels_dict=None    
+):
+    df = pd.DataFrame(rows)
+    
+    # Calculate Mean, Std, and  CI
+    df_mean = df.groupby(x_key).mean().reset_index()
+    df_std = df.groupby(x_key).std().reset_index().fillna(0.0)
+    df_count = df.groupby(x_key).count().reset_index()
+    df_ci = (1.96 * df_std / np.sqrt(df_count)).fillna(0.0)
+
+    fig, ax = plt.subplots(figsize=(7, 5))
+    
+    if labels_dict is not None:
+        name_map = labels_dict
+    else:
+        name_map = {
+            "base": "ERM", 
+            "ot": "FAUST-U", 
+            "aware": "FAUST-A", 
+            "fairreg": "FairReg", 
+            "frappe": "FRAPPÉ", 
+            "shat": "Plug-In W2"
+        }
+    gammas = df_mean[x_key].values
+    
+    alphas = np.linspace(0.2, 1.0, len(gammas))
+
+    for w2_k, mse_k in zip(w2_keys, mse_keys):
+        w2_vals = df_mean[w2_k].values
+        mse_vals = df_mean[mse_k].values
+        w2_ci = df_ci[w2_k].values
+        mse_ci = df_ci[mse_k].values
+        
+        raw_name = w2_k.replace("w2_", "")
+        label = name_map.get(raw_name, raw_name)
+        
+        #dummy invisible line just to claim a color and populate the legend
+        dummy_line, = ax.plot([], [], marker='o', label=label, linestyle='-')
+        color = dummy_line.get_color()
+        
+        #Plot the points and segments with an increasing alpha
+        for i in range(len(gammas)):
+            # Draw a line segment connecting to the previous point
+            if i > 0:
+                ax.plot(
+                    [w2_vals[i-1], w2_vals[i]], 
+                    [mse_vals[i-1], mse_vals[i]], 
+                    color=color, alpha=alphas[i], linestyle='-'
+                )
+
+    ax.set_xlabel(r"Fairness Violation ($W_2 \downarrow$)")
+    ax.set_ylabel(r"Error ($\mathrm{MSE} \downarrow$)")
+    ax.set_title(title)
+    
+
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    
+
+    if w2_max is not None:
+        ax.set_xlim(right=w2_max)
+    if mse_max is not None:
+        ax.set_ylim(top=mse_max)
+        
+    ax.legend()
+    ax.grid(True, alpha=0.3, which="both", ls="--")
+    
+    fig.tight_layout()
+    if save_path:
+        fig.savefig(save_path, bbox_inches="tight")
+        plt.close(fig)
+        
+    return save_path
+
+def plot_fairreg_convergence(df_conv, dataset_name, save_path):
+    """
+    Plots FairReg convergence metrics as a function of Epochs.
+    Averages over multiple runs and plots a 95% Confidence Interval.
+    """
+
+    fig, axes = plt.subplots(1, 4, figsize=(9.5, 2.5))
+    
+    x_col = 'Epoch' if 'Epoch' in df_conv.columns else 'T'
+    x_label = "Number of Epochs" if x_col == 'Epoch' else "Number of Iterations (T)"
+    
+
+    df_mean = df_conv.groupby(x_col).mean().reset_index()
+    
+
+    if 'run' in df_conv.columns and df_conv['run'].nunique() > 1:
+        df_std = df_conv.groupby(x_col).std().reset_index().fillna(0.0)
+        df_count = df_conv.groupby(x_col).count().reset_index()
+        df_ci = 1.96 * df_std / np.sqrt(df_count) 
+    else:
+        df_ci = df_mean.copy()
+        for col in df_ci.columns:
+            if col != x_col: df_ci[col] = 0.0
+
+    metrics_config = [
+        ('MSE', "MSE", r"$\mathrm{MSE}$", 'tab:blue', 'o'),
+        ('DP_max', "KS", "KS", 'tab:red', 's'),
+        ('W2', r"$W_2$", r"$W_2$", 'tab:green', '^'),
+        ('Time_sec', "Total Training Time", "Time (seconds)", 'tab:purple', 'd')
+    ]
+
+    for i, (col, title, ylabel, color, marker) in enumerate(metrics_config):
+        ax = axes[i]
+        if col not in df_mean.columns:
+            ax.set_visible(False)
+            continue
+            
+        x_vals = df_mean[x_col]
+        y_mean = df_mean[col]
+        y_ci = df_ci[col]
+        
+
+        ax.plot(x_vals, y_mean, marker=marker, markersize=2, linewidth=1.5, color=color)
+        
+        ax.fill_between(x_vals, y_mean - y_ci, y_mean + y_ci, color=color, alpha=0.2)
+        
+        ax.set_title(title)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(ylabel)
+        ax.grid(True, alpha=0.3)
+        
+
+        ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)
+
+            
+        if col == 'Time_sec':
+            ax.set_yscale('log')
+
+    fig.tight_layout()
+    plt.savefig(save_path, dpi=200, bbox_inches='tight')
+    plt.close()

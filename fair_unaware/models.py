@@ -1,6 +1,61 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
+from scipy.special import expit
 
+class OracleSyntheticClassifier(BaseEstimator, ClassifierMixin):
+    """True P(S=1 | X) Bayes predictor for the 2D synthetic dataset."""
+    def __init__(self, gamma=0.5):
+        self.gamma = gamma
+        self.classes_ = np.array([0, 1])
+
+    def fit(self, X, y=None):
+        return self
+
+    def predict_proba(self, X):
+        # S depends ONLY on X1, so we ignore X2 for the classifier
+        X1 = X[:, 0]
+        
+        if self.gamma >= 0.999:
+            prob_1 = (X1 > 0).astype(float)
+        elif self.gamma <= 0.001:
+            prob_1 = np.full_like(X1, 0.5)
+        else:
+            logits = (2.0 * self.gamma * X1) / (1.0 - self.gamma**2)
+            prob_1 = expit(logits)
+            
+        return np.column_stack([1.0 - prob_1, prob_1])
+
+    def predict(self, X):
+        return (self.predict_proba(X)[:, 1] >= 0.5).astype(int)
+    
+
+class OracleSyntheticUnawareRegressor(BaseEstimator, RegressorMixin):
+    """True E[Y | X] Bayes predictor for the 2D synthetic dataset."""
+    def __init__(self, gamma=0.5, beta=None):
+        self.gamma = gamma
+        self.beta = beta
+
+    def fit(self, X, y=None):
+        return self
+
+    def predict(self, X):
+        X1 = X[:, 0]
+        X2 = X[:, 1]
+        return 2.0 * X1 - 1.0 * X2
+
+class OracleSyntheticAwareRegressor(BaseEstimator, RegressorMixin):
+    """True E[Y | X, S] Bayes predictor for the 2D synthetic dataset."""
+    def __init__(self, beta=None):
+        self.beta = beta
+
+    def fit(self, X, y):
+        return self
+
+    def predict(self, X):
+        X1 = X[:, 0]
+        X2 = X[:, 1]
+        return 2.0 * X1 - 1.0 * X2
 
 def fit_eta_model(X, y, model=None, random_state=0):
     """
@@ -96,6 +151,41 @@ def compute_delta_from_posteriors(proba, classes, group_priors, eps=1e-12):
     # THEO 4: Δ(x) ∝ P(S=c0|X=x)/p0 - P(S=c1|X=x)/p1
     delta = p_s0_x / (p0 + eps) - p_s1_x / (p1 + eps)
     return delta
+
+def compute_multiclass_delta(proba, classes, group_priors, eps=1e-12):
+    """
+    Compute the generalized proxy for Δ_k(x) for K >= 2 groups.
+    
+    Formula: Δ_k(x) = P(S=k | X=x) / p_k - 1
+    This quantifies how over/under-represented group k is at point x.
+
+    Parameters
+    ----------
+    proba : np.ndarray of shape (n_samples, K)
+        Posterior probabilities P(S=classes[k] | X).
+    classes : np.ndarray of shape (K,)
+        Class labels in the order of columns of `proba`.
+    group_priors : dict
+        Mapping from label -> prior probability P(S=label).
+    eps : float
+        Small value to avoid division by zero.
+
+    Returns
+    -------
+    delta_multi : np.ndarray of shape (n_samples, K)
+    """
+    n_samples, K = proba.shape
+    delta_multi = np.zeros_like(proba, dtype=float)
+    
+    for k_idx in range(K):
+        c_k = classes[k_idx]
+        p_k = group_priors[c_k]
+        
+        # Generalized Delta for group k
+        delta_multi[:, k_idx] = (proba[:, k_idx] / (p_k + eps)) - 1.0
+        
+    return delta_multi
+
 
 class EntropicKernelRegressor:
     """Non-parametric 'entropic' smoother on Z=(eta, delta).

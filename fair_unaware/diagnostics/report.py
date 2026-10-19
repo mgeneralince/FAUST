@@ -4,6 +4,7 @@ from pathlib import Path
 from ..plots.visualization import (
     plot_eta_delta_scatter,
     plot_prediction_distributions,
+    plot_prediction_ecdf,
     plot_transport_plan,
     plot_rank_reordering,
     plot_base_vs_fair_scatter,
@@ -19,7 +20,7 @@ from ..plots.visualization import (
     scatter_XY_colored_by_S,
 )
 
-from fair_unaware.metrics import rank_metrics_by_group, auc_report, metrics_to_latex, dp_mean_gap
+from fair_unaware.metrics import rank_metrics_by_group, auc_report, metrics_to_latex, dp_mean_gap, w2_gap_between_groups
 from fair_unaware.models import compute_delta_from_posteriors
 
 def plot_basic_diagnostics(
@@ -55,7 +56,7 @@ def plot_basic_diagnostics(
     y_base = model.predict_base(X)
     y_fair = model.predict(X)
 
-    # Recompute (eta, delta) on the provided X (meaningful if X is a held-out set)
+    # Recompute (eta, delta) on the provided X
     eta_plot = y_base
     proba_plot = model.base_classifier_.predict_proba(X)
     delta_plot = compute_delta_from_posteriors(
@@ -167,10 +168,11 @@ def plot_basic_diagnostics(
     _save(fig2, "base_pred_dists")
 
     # (b) bis prediction distributions per group (before vs after)
-    fig2b, ax2b = plt.subplots()
-    plot_prediction_distributions(y_base, y_fair, S, ax=ax2b)
-    _save(fig2b, "pred_dists")
-
+    fig2bd, axes2bd = plt.subplots(1, 2, figsize=(12, 5))
+    plot_prediction_distributions(y_base, y_fair, S, ax=axes2bd[0])
+    plot_prediction_ecdf(y_base, y_fair, S, ax=axes2bd[1])
+    fig2bd.tight_layout()
+    _save(fig2bd, "pred_dists_and_ecdf")
     # (b) ter scatter X-Y 
     fig2c, axes2c = scatter_XY_colored_by_S(X, Y, S) 
     _save(fig2c, "scatter_XY_colored_by_S")
@@ -225,18 +227,24 @@ def plot_basic_diagnostics(
     def _safe(x):
         x = float(x)
         return x if np.isfinite(x) else np.nan
-
+    
     mse_base = np.nan
     dp_base = np.nan
+    W2_base = np.nan
     if y_base is not None:
         mse_base = _safe(np.mean((y_base - Y) ** 2))
         dp_base = _safe(dp_mean_gap(y_base, S))
+        W2_base = _safe(w2_gap_between_groups(y_base, S))  
+
 
     mse_fair = np.nan
     dp_fair = np.nan
+    W2_fair = np.nan
     if y_fair is not None:
         mse_fair = _safe(np.mean((y_fair - Y) ** 2))
         dp_fair = _safe(dp_mean_gap(y_fair, S))
+        W2_fair = _safe(w2_gap_between_groups(y_fair, S))  
+
 
     cont_map = getattr(model, "continuous_map", None)
     cont_eps = getattr(model, "continuous_epsilon", None)
@@ -244,14 +252,11 @@ def plot_basic_diagnostics(
 
     metrics_path = tables_dir / f"{sp.name}_metrics.csv"
     with open(metrics_path, "w") as f:
-        f.write("cont_map,cont_epsilon,cont_knn,sinkhorn_reg,n,mse_base,dp_base,mse_fair,dp_fair\n")
+        f.write("cont_map,cont_epsilon,cont_knn,sinkhorn_reg,n,mse_base,dp_base,W2_base,mse_fair,dp_fair,W2_fair\n")
         f.write(
             f"{cont_map},{cont_eps},{cont_knn},{model.sinkhorn_reg},{len(X)},"
-            f"{mse_base:.2f},{dp_base:.2f},{mse_fair:.2f},{dp_fair:.2f}\n"
+            f"{mse_base:.2f},{dp_base:.2f}, {W2_base:.2f},{mse_fair:.2f},{dp_fair:.2f}, {W2_fair:.2f}\n"
         )
-
-
-
 
     # (e) aggregated OT plan by eta bins 
     if getattr(model, "store_diagnostics", False) and hasattr(model, "pi_") and hasattr(model, "h_plus_"):

@@ -1,0 +1,18 @@
+\begin{table}[ht!]
+    \centering
+    \begin{tabular}{r S[table-format=4.2] @{\,\(\pm\)\,} S[table-format=3.2] S[table-format=4.2] @{\,\(\pm\)\,} S[table-format=3.2]}
+    \toprule
+    \textbf{Unlabeled Samples ($N$)} & \multicolumn{2}{c}{\textbf{Exact OT Step (sec) $\downarrow$}} & \multicolumn{2}{c}{\textbf{Total Pipeline Time (sec) $\downarrow$}} \\
+    \midrule
+    1,000 & 0.03 & 0.00 & 0.20 & 0.01 \\
+    2,000 & 0.14 & 0.04 & 0.46 & 0.04 \\
+    5,000 & 1.46 & 0.58 & 2.31 & 0.58 \\
+    10,000 & 12.71 & 0.11 & 14.63 & 0.13 \\
+    20,000 & 98.18 & 0.45 & 102.47 & 0.45 \\
+    50,000 & 2589.65 & 241.70 & 2602.47 & 241.54 \\
+    \bottomrule
+    \end{tabular}
+    \vspace{0.5em}
+    \caption{\textbf{Empirical scalability of the exact discrete OT mapping.} Runtimes evaluated across increasing dataset sizes.}
+    \label{tab:scalability_n}
+\end{table}

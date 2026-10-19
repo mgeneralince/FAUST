@@ -4,8 +4,10 @@ import numpy as np
 import time 
 
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.neighbors import KNeighborsRegressor
 
 from .utils import check_binary_groups, compute_group_priors
+from .metrics import w2_1d_weighted, dp_mean_gap
 from .models import (
     fit_eta_model,
     fit_s_classifier,
@@ -18,6 +20,14 @@ from .ot.barycenter import (
     solve_ot_plan,
     compute_barycentric_predictions_from_plan,
 )
+
+from .ot.relaxed import (
+    compute_cost_matrix_relaxed,
+    compute_relaxed_predictions_from_plan,
+    compute_cost_matrix_tv,
+    compute_tv_predictions_from_plan,
+)
+
 
 
 
@@ -61,6 +71,8 @@ class UnawareFairRegressor:
         random_state=0,
         verbose=False,
         store_diagnostics=False,
+        relax_lambda=None,
+        penalty="l2"
     ):
         """
         Parameters
@@ -91,6 +103,10 @@ class UnawareFairRegressor:
         self.random_state = random_state
         self.verbose = verbose
         self.store_diagnostics = store_diagnostics
+        self.relax_lambda = relax_lambda
+        self.penalty = penalty
+    
+
         self.timings_ = {} 
 
         # Attributes set in fit
@@ -122,6 +138,9 @@ class UnawareFairRegressor:
         self.pi_ = None
         self.f_plus_ = None
         self.f_minus_ = None
+
+        self.relax_lambda_ = None
+        self.relax_w2_ = None
 
     def fit(self, X_train, S_train, y_train, X_unlab=None, group_priors=None):
         """
@@ -235,35 +254,44 @@ class UnawareFairRegressor:
         h_plus, d_plus = measures["h_plus"], measures["d_plus"]
         h_minus, d_minus = measures["h_minus"], measures["d_minus"]
 
+
         # 6) OT plan on X_fair
-        t0 = time.perf_counter()
-        C = compute_cost_matrix(h_plus, d_plus, h_minus, d_minus)
-        self.timings_["cost_matrix_computation"] = time.perf_counter() - t0
-        if self.verbose:
-            print("[fit] Computed OT cost matrix:", C.shape)
+        if self.relax_lambda is None or float(self.relax_lambda) == float('inf'):
+            # STRICT / EXACT BARYCENTER
+            t0 = time.perf_counter()
+            C = compute_cost_matrix(h_plus, d_plus, h_minus, d_minus)
+            pi = solve_ot_plan(a, b, C, sinkhorn_reg=self.sinkhorn_reg)
+            f_plus, f_minus = compute_barycentric_predictions_from_plan(
+                pi, h_plus, d_plus, h_minus, d_minus, a, b
+            )
+            
+        else:
+            # RELAXED WITH FIXED LAMBDA
+            t0 = time.perf_counter()
+            lam = float(self.relax_lambda)
+            if self.penalty == "l2":
+                C = compute_cost_matrix_relaxed(h_plus, d_plus, h_minus, d_minus, lam=lam)
+                pi = solve_ot_plan(a, b, C, sinkhorn_reg=self.sinkhorn_reg)
+                f_plus, f_minus = compute_relaxed_predictions_from_plan(
+                    pi, h_plus, d_plus, h_minus, d_minus, a, b, lam=lam
+                )
+            elif self.penalty == "tv":
+                C = compute_cost_matrix_tv(h_plus, d_plus, h_minus, d_minus, lam=lam)
+                pi = solve_ot_plan(a, b, C, sinkhorn_reg=self.sinkhorn_reg)
+                f_plus, f_minus = compute_tv_predictions_from_plan(
+                    pi, h_plus, d_plus, h_minus, d_minus, a, b, lam=lam
+                )
+            else:
+                raise ValueError(f"Unknown penalty={self.penalty!r}. Expected 'l2' or 'tv'.")
 
-        t0 = time.perf_counter()
-        pi = solve_ot_plan(a, b, C, sinkhorn_reg=self.sinkhorn_reg)
-        self.timings_["ot_plan_solution"] = time.perf_counter() - t0
-        if self.verbose:
-            print("[fit] Solved OT plan.")
-
+        self.timings_["ot_total"] = time.perf_counter() - t0
+        
         if self.store_diagnostics:
             self.C_ = C
             self.pi_ = pi
-
-        # 7) Barycentric predictions at supports
-        t0 = time.perf_counter()
-        f_plus, f_minus = compute_barycentric_predictions_from_plan(
-            pi, h_plus, d_plus, h_minus, d_minus, a, b
-        )
-        self.timings_["barycentric_predictions"] = time.perf_counter() - t0
-        if self.verbose:
-            print("[fit] Computed barycentric predictions.")
-
-        if self.store_diagnostics:
             self.f_plus_ = f_plus
             self.f_minus_ = f_minus
+
 
         # 8) Build f_target on X_fair
         f_target = eta_hat_fair.copy()
@@ -274,9 +302,8 @@ class UnawareFairRegressor:
         t0 = time.perf_counter()
         Z = np.column_stack([eta_hat_fair, delta_hat_fair])
 
-        # NEW: choose continuous mapping
+        # choose cont maping 
         if self.fair_regressor is not None:
-            # user-provided regressor overrides everything
             self.fair_regressor_ = self.fair_regressor
 
         elif self.continuous_map == "rf":
@@ -290,7 +317,9 @@ class UnawareFairRegressor:
                 epsilon=self.continuous_epsilon,
                 knn=self.continuous_knn,
             )
-
+        elif self.continuous_map == "knn":                                     
+            k = self.continuous_knn if self.continuous_knn is not None else 1  
+            self.fair_regressor_ = KNeighborsRegressor(n_neighbors=k)          
         else:
             raise ValueError(
                 f"Unknown continuous_map={self.continuous_map!r}. Expected 'rf' or 'entropic'."
