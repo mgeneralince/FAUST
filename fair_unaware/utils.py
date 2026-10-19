@@ -14,9 +14,9 @@ def load_dataset(name, data_dir='data'):
     Returns (X, S, y) for the requested dataset.
     Assumes data_dir is relative to the project root or absolute.
     """
-    # Adjust path if running from scripts/ vs root
+
     if not os.path.exists(data_dir):
-        # Fallback: try to find data relative to the package location
+
         base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         data_dir = os.path.join(base_path, 'data')
 
@@ -34,11 +34,10 @@ def load_dataset(name, data_dir='data'):
 
     elif name == 'communities':
         df = pd.read_csv(os.path.join(data_dir, 'communities.csv'))
-        # Standard processing for Communities: S is often binary derived from racePctWhite
+        #processing for Communities 
         S_cont = df['racePctWhite']
         S = (S_cont > S_cont.median()).astype(float)
         y = df['ViolentCrimesPerPop']
-        # Drop non-predictive/sensitive columns
         drop_cols = ['ViolentCrimesPerPop', 'racePctWhite', 'communityname', 'state']
         X = df.drop(columns=[c for c in drop_cols if c in df.columns])
         X = X.select_dtypes(include=[np.number]).fillna(0)
@@ -415,8 +414,6 @@ def _render_metrics_table_pivot(stats: Dict[str, Tuple[float, float]],
         else:
             best_by_metric[met] = min(vals, key=lambda t: t[0])[1]
 
-
-    # columns: Method | (mean ± std) for each metric
     colspec = "l " + " ".join(
         [f"S[table-format=1.{precision}] @{{\\,\\(\\pm\\)\\,}} S[table-format=1.{precision}]"
          for _ in metrics]
@@ -434,10 +431,7 @@ def _render_metrics_table_pivot(stats: Dict[str, Tuple[float, float]],
                 mu_s = f"{mu:.{precision}f}"
                 sd_s = f"{sd:.{precision}f}"
 
-                # if best_by_metric.get(met) == meth:
-                #     row += [rf"{{\bfseries {mu_s}}}", rf"{{\bfseries {sd_s}}}"]
-                # else:
-                #     row += [mu_s, sd_s]
+
                 is_best = (best_by_metric.get(met) == meth)
                 is_tied = False
 
@@ -581,13 +575,7 @@ def write_summary_relative_tex(
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # df_rel = delta_to_base_df(df, percent=percent)
     df_rel = relative_change_to_base_df(df, percent=percent)
-    # relative_change_to_base_df sets base columns to 0; restore them so Base stays absolute
-    # for col in df_rel.columns:
-    #     m = _REL_COL_RE.match(col)
-    #     if m is not None and m.group("method") == "base":
-    #         df_rel[col] = df[col]
 
     def _stats_from_cols(cols: list[str]) -> dict[str, tuple[float, float]]:
         out = {}
@@ -667,61 +655,10 @@ def write_summary_relative_tex(
     return out_path
 
 
-# def relative_change_to_base_df(
-#     df: "pd.DataFrame",
-#     *,
-#     eps: float = 1e-12,
-#     percent: bool = True,
-# ) -> "pd.DataFrame":
-#     """
-#     Replace each metric column by its run-by-run relative change vs the corresponding base column.
-
-#     For:  <metric>_<method><rest>
-#     base: <metric>_base<rest>
-
-#     rel = (value - base) / max(|base|, eps)
-#     If percent=True, multiply by 100.
-#     """
-#     print("KIKOU :Computing relative changes to base columns...")
-#     out = df.copy()
-
-#     for col in list(out.columns):
-#         if col == "run":
-#             continue
-
-#         m = _REL_COL_RE.match(col)
-#         if m is None:
-#             continue
-
-#         metric = m.group("metric")
-#         method = m.group("method")
-#         rest = m.group("rest")
-#         base_col = f"{metric}_base{rest}"
-
-#         if base_col not in out.columns:
-#             continue
-
-#         # IMPORTANT: compute from the original df (not from out, because out is being modified)
-#         base = pd.to_numeric(df[base_col], errors="coerce").astype(float)
-
-#         if method == "base":
-#             out[col] = 0.0
-#             continue
-
-#         val = pd.to_numeric(df[col], errors="coerce").astype(float)
-#         denom = np.maximum(np.abs(base), eps)
-#         # rel = (val - base) / denom
-#         rel = val / denom
-#         if percent:
-#             rel = 100.0 * rel
-#         out[col] = rel
-
-#     return out
 
 def relative_change_to_base_df(df, *, eps=1e-12, percent=True):
     out = df.copy()
 
-    # pick which baseline to use per method (when base_full exists)
     baseline_for = {
         "fairreg": "base",
         "fairreg_auto": "base",
@@ -751,14 +688,13 @@ def relative_change_to_base_df(df, *, eps=1e-12, percent=True):
 
         base = pd.to_numeric(df[base_col], errors="coerce").astype(float)
 
-        # keep the baseline method absolute if you want it displayed
         if method in {"base", "base_full"}:
             out[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
             continue
 
         val = pd.to_numeric(df[col], errors="coerce").astype(float)
         denom = np.maximum(np.abs(base), eps)
-        rel = val  / denom   # <-- actual relative change
+        rel = val  / denom   
         if percent:
             rel = 100.0 * rel
         out[col] = rel
@@ -1209,118 +1145,3 @@ def generate_custom_summary_tex(df, out_abs, out_rel, dataset_name):
 
     with open(out_abs, "w") as f: f.write(build_table(is_relative=False))
     with open(out_rel, "w") as f: f.write(build_table(is_relative=True))
-
-# def generate_custom_summary_tex(df, out_abs, out_rel, dataset_name):
-#     """
-#     Generates the absolute and relative LaTeX summary tables with specific 
-#     formatting: Base on top, Unaware models in middle (with Wilcoxon tests),
-#     and Aware models at the bottom, separated by midrules.
-#     """
-#     # 1. models 
-#     all_models = [
-#         ("base", "ERM Unfair", "base"),
-#         ("fairreg", "FairReg", "unaware"),
-#     ]
-#     if "mse_fairreg_auto" in df.columns:
-#         all_models.append(("fairreg_auto", "FairReg (auto)", "unaware"))
-
-#     all_models.append(("ot", "OT Unaware", "unaware"))
-
-#     if "mse_aware_hat_hard" in df.columns:
-#         all_models.append(("aware_hat_hard", r"OT $\hat{S}$ hard", "unaware"))
-#     if "mse_aware_hat_soft" in df.columns:
-#         all_models.append(("aware_hat_soft", r"OT $\hat{S}$ soft", "unaware"))
-
-#     all_models.append(("aware", "OT aware", "aware"))
-
-# # 2. metrics 
-#     metrics_config = [
-#         ("MSE", "mse_{}"),
-#         ("$W_2$", "w2_{}"),
-#         ("TV", "tv_{}"),
-#         ("KS", "ks_{}"),
-#         ("KS$^{\\mathcal{T}}$", "dp_{}_max")
-#     ]
-
-#     def build_table(is_relative):
-#         lines = [
-#             r"\begin{table}[h]",
-#             r"\centering",
-#             r"\begin{tabular}{l" + "c" * len(metrics_config) + "}",
-#             r"\toprule",
-#             "Method & " + " & ".join([m[0] for m in metrics_config]) + r" \\"
-#         ]
-
-#     #sats 
-#         stats = {}
-#         for m_id, _, _ in all_models:
-#             stats[m_id] = {}
-#             for met_name, met_pat in metrics_config:
-#                 col = met_pat.replace("_{}", f"_{m_id}")
-#                 if col not in df.columns: continue
-                
-#                 vals = df[col].values
-#                 base_vals = df[met_pat.replace("_{}", "_base")].values
-                
-#                 if is_relative:
-#                     vals = vals / (base_vals + 1e-9) 
-                    
-#                 stats[m_id][met_name] = {
-#                     "mean": np.mean(vals), "std": np.std(vals), "raw": vals
-#                 }
-
-#         #best unaware models  
-#         best_unaware = {}
-#         for met_name, _ in metrics_config:
-#             unaware_means = {
-#                 m_id: stats[m_id][met_name]["mean"] 
-#                 for m_id, _, cat in all_models if cat == "unaware" and met_name in stats[m_id]
-#             }
-#             if unaware_means:
-#                 best_unaware[met_name] = min(unaware_means, key=unaware_means.get)
-
-
-#         current_cat = None
-#         for m_id, name_latex, cat in all_models:
-#             if current_cat is not None and current_cat != cat:
-#                 lines.append(r"\midrule")
-#             current_cat = cat
-
-#             row_strs = [name_latex]
-#             for met_name, _ in metrics_config:
-#                 if met_name not in stats[m_id]:
-#                     row_strs.append("-")
-#                     continue
-                    
-#                 mean, std = stats[m_id][met_name]["mean"], stats[m_id][met_name]["std"]
-#                 val_str = f"{mean:.2f} $\\pm$ {std:.2f}"
-
-#                 # Bolding et Bleu uniquement pour la catégorie "unaware"
-#                 if cat == "unaware" and met_name in best_unaware:
-#                     best_id = best_unaware[met_name]
-#                     if m_id == best_id:
-#                         val_str = f"\\textbf{{{val_str}}}"
-#                     else:
-#                         try:
-#                             _, pval = wilcoxon(stats[m_id][met_name]["raw"], stats[best_id][met_name]["raw"])
-#                             if pval > 0.05:
-#                                 val_str = f"\\textcolor{{blue}}{{{val_str}}}"
-#                         except:
-#                             pass
-                            
-#                 row_strs.append(val_str)
-            
-#             lines.append(" & ".join(row_strs) + r" \\")
-
-#         lines.extend([
-#             r"\bottomrule",
-#             r"\end{tabular}",
-#             f"\\caption{{{('Relative' if is_relative else 'Absolute')} metrics for {dataset_name}}}",
-#             r"\end{table}"
-#         ])
-#         return "\n".join(lines)
-
-#     with open(out_abs, "w") as f: f.write(build_table(is_relative=False))
-#     with open(out_rel, "w") as f: f.write(build_table(is_relative=True))
-
-

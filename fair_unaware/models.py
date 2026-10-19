@@ -13,7 +13,6 @@ class OracleSyntheticClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def predict_proba(self, X):
-        # S depends ONLY on X1, so we ignore X2 for the classifier
         X1 = X[:, 0]
         
         if self.gamma >= 0.999:

@@ -6,31 +6,6 @@ import numpy as np
 from itertools import combinations
 
 
-# def dp_cdf_gaps(y_pred, S, bins):
-#     """
-#     DP metric for regression: sup_t | P(Yhat<=t|S=0) - P(Yhat<=t|S=1) |
-#     returned as a dict over the provided bins (like the external FairReg code did).
-#     """
-#     y_pred = np.asarray(y_pred).ravel()
-#     S = np.asarray(S).ravel()
-#     bins = np.asarray(bins).ravel()
-
-#     s_vals = np.unique(S)
-#     if s_vals.size != 2:
-#         raise ValueError("dp_cdf_gaps currently expects exactly 2 groups.")
-
-#     s0, s1 = s_vals[0], s_vals[1]
-#     y0 = y_pred[S == s0]
-#     y1 = y_pred[S == s1]
-#     if y0.size == 0 or y1.size == 0:
-#         raise ValueError("Both groups must have at least one sample to compute DP gaps.")
-
-#     gaps = {}
-#     for t in bins:
-#         c0 = float(np.mean(y0 <= t))
-#         c1 = float(np.mean(y1 <= t))
-#         gaps[float(t)] = abs(c0 - c1)
-#     return gaps
 
 def dp_cdf_gaps(y_pred, S, bins):
     """
@@ -65,34 +40,6 @@ def dp_cdf_gaps(y_pred, S, bins):
 def dp_cdf_max_gap(y_pred, S, bins):
     gaps = dp_cdf_gaps(y_pred, S, bins=bins)
     return float(max(gaps.values()))
-
-
-# def tv_gap(y, S, bins):
-#     """
-#     Computes the Total Variation (TV) distance between the empirical 
-#     distributions of predictions for the two groups, using fixed bins.
-#     """
-#     y = np.asarray(y)
-#     S = np.asarray(S)
-#     groups = np.unique(S)
-    
-#     if len(groups) != 2:
-#         raise ValueError("TV gap is only implemented for binary groups here.")
-        
-#     y0 = y[S == groups[0]]
-#     y1 = y[S == groups[1]]
-    
-
-#     y0_clipped = np.clip(y0, bins[0], bins[-1])
-#     y1_clipped = np.clip(y1, bins[0], bins[-1])
-    
-#     p0, _ = np.histogram(y0_clipped, bins=bins)
-#     p1, _ = np.histogram(y1_clipped, bins=bins)
-    
-#     p0 = p0 / max(len(y0), 1)
-#     p1 = p1 / max(len(y1), 1)
-    
-#     return 0.5 * float(np.sum(np.abs(p0 - p1)))
 
 
 def tv_gap(y, S, bins):
@@ -198,34 +145,6 @@ def w2_1d_weighted(
 
     return w2_sq if squared else float(np.sqrt(w2_sq))
 
-# def w2_gap_between_groups(
-#     y_hat: np.ndarray,
-#     s: np.ndarray,
-#     *,
-#     squared: bool = False,
-#     eps: float = 1e-15,
-# ) -> float:
-#     """
-#     Wasserstein gap between the two sensitive groups.
-
-#     Returns W2^2 by default (set squared=False to get W2).
-#     """
-#     y_hat = np.asarray(y_hat, float).ravel()
-#     s = np.asarray(s).ravel()
-
-#     vals = np.unique(s)
-#     if len(vals) != 2:
-#         raise ValueError(f"Expected binary groups; got {vals}")
-
-#     g0, g1 = vals[0], vals[1]
-#     x0 = y_hat[s == g0]
-#     x1 = y_hat[s == g1]
-
-#     wx0 = np.full_like(x0, 1.0 / max(len(x0), 1), dtype=float)
-#     wx1 = np.full_like(x1, 1.0 / max(len(x1), 1), dtype=float)
-
-#     return float(w2_1d_weighted(x0, wx0, x1, wx1, eps=eps, squared=squared))
-
 def w2_gap_between_groups(
     y_hat: np.ndarray,
     s: np.ndarray,
@@ -279,9 +198,6 @@ def _safe_auc(y_true, y_score):
         return float(roc_auc_score(y_true, y_score))
     except Exception:
         return np.nan
-
-# def dp_mean_gap(y_pred, S):
-#     return float(abs(y_pred[S == 0].mean() - y_pred[S == 1].mean()))
 
 def dp_mean_gap(y_pred, S):
     """Maximum absolute difference between the mean predictions of any two groups."""

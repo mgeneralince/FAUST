@@ -48,33 +48,29 @@ class FrappeRegressor(BaseEstimator, RegressorMixin):
         self.random_state = random_state
 
     def fit(self, X, S, y, X_unlab=None, S_unlab=None):
-        # 1. Fit the base ERM regressor
         np.random.seed(self.random_state)
         torch.manual_seed(self.random_state)
         
         self.base_regressor_ = clone(self.base_regressor)
         self.base_regressor_.fit(X, y)
 
-        # 2. Prepare data for the post-hoc module
         if X_unlab is None:
             X_unlab, S_unlab = X, S
 
-        # Generate frozen base predictions
         y_base = self.base_regressor_.predict(X_unlab)
 
-        # Convert to PyTorch tensors
         X_t = torch.tensor(X_unlab, dtype=torch.float32)
         S_t = torch.tensor(np.asarray(S_unlab).ravel(), dtype=torch.float32)
         y_base_t = torch.tensor(y_base, dtype=torch.float32)
 
-        # 3. Initialize FRAPPÉ T(x) module and Optimizer
+        # Initialize T(x) 
         self.posthoc_ = PostHocModule(input_dim=X.shape[1], hidden_dims=self.hidden_dims)
         optimizer = optim.Adam(self.posthoc_.parameters(), lr=self.lr)
 
         dataset_size = X_t.shape[0]
         bs = self.batch_size if self.batch_size is not None else dataset_size
 
-        # 4. Training Loop
+        # Train 
         for epoch in range(self.epochs):
             permutation = torch.randperm(dataset_size)
             
@@ -91,10 +87,9 @@ class FrappeRegressor(BaseEstimator, RegressorMixin):
                 # Y_fair = Y_base + T(X)
                 y_fair = batch_y_base + delta
 
-                # Prediction Divergence: MSE(Y_fair, Y_base) -> effectively MSE(delta, 0)
+                #Divergence MSE(Y_fir, Y_base)
                 loss_pred = torch.mean(delta ** 2)
 
-                # Demographic Parity Penalty (Squared Mean Difference)
                 # mask1 = (batch_S == 1.0).float()
                 # mask0 = (batch_S == 0.0).float()
                 
@@ -102,12 +97,11 @@ class FrappeRegressor(BaseEstimator, RegressorMixin):
                 # mean0 = torch.sum(y_fair * mask0) / (torch.sum(mask0) + 1e-8)
                 # loss_fair = (mean1 - mean0) ** 2
 
-                # # Fairness Penalty: MMD with Gaussian Kernel
                 # y1 = y_fair[batch_S == 1.0]
                 # y0 = y_fair[batch_S == 0.0]
                 # loss_fair = diff_mmd_1d(y1, y0, sigma=self.mmd_sigma)
 
-                # Fairness Penalty: MMD across all pairs of groups in the batch
+                #MMD across all pairs 
                 unique_groups = torch.unique(batch_S)
                 loss_fair = torch.tensor(0.0, device=y_fair.device)
                 if len(unique_groups) > 1:
@@ -117,7 +111,6 @@ class FrappeRegressor(BaseEstimator, RegressorMixin):
                             y2 = y_fair[batch_S == unique_groups[g2_idx]]
                             loss_fair += diff_mmd_1d(y1, y2, sigma=self.mmd_sigma)
 
-                # Total Objective
                 loss = loss_pred + self.lam * loss_fair
 
                 loss.backward()
@@ -126,10 +119,10 @@ class FrappeRegressor(BaseEstimator, RegressorMixin):
         return self
 
     def predict(self, X):
-        # 1. Base prediction
+        #Base 
         y_base = self.base_regressor_.predict(X)
         
-        # 2. Additive post-hoc correction (Unaware of S)
+        # correction (Unaware of S)
         self.posthoc_.eval()
         with torch.no_grad():
             X_t = torch.tensor(X, dtype=torch.float32)
