@@ -6,7 +6,7 @@ Framework for Aware and Unaware Settings** using
 basic `scikit-learn` models.
 
 ## Citation 
-
+```
 @article{lince2026geometryrelaxedfairregression,
       title={Geometry of Relaxed Fair Regression: A Unified Framework for Aware and Unaware Settings}, 
       author={M. Generali Lince and V. Divol and R. Flamary and S. Gaucher and P. Loiseau},
@@ -16,67 +16,68 @@ basic `scikit-learn` models.
       primaryClass={stat.ML},
       url={https://arxiv.org/abs/2605.28233}, 
 }
+```
 
 ## High-level idea
 
-Given data \((X, S, Y)\) with:
-- \(X\): non-sensitive features
-- \(S \in \{0,1\}\): sensitive group
-- \(Y \in \mathbb{R}\): regression target
+Given data $(X, S, Y)$ with:
+- $X$ : non-sensitive features
+- $S \in \{0,1\}$: sensitive group
+- $Y \in \mathbb{R}$: regression target
 
-we want a predictor \(f(X)\) that
+we want a predictor $f(X)$ that
 
-1. Minimizes squared loss \(\mathbb{E}[(Y - f(X))^2]\),
-2. Satisfies **Demographic Parity**: the distribution of \(f(X)\) is
-   the same across groups (unawareness: \(f\) cannot see \(S\) directly).
+1. Minimizes squared loss $\mathbb{E}[(Y - f(X))^2]$,
+2. Satisfies **Demographic Parity**: the distribution of $f(X)$ is
+   the same across groups (unawareness: $f$ cannot see $S$ directly).
 
 The paper shows that (in the 2-group case) the optimal fair regressor
 can be obtained by solving an OT barycenter problem in the space of
-\((\eta(X), \Delta(X))\), where:
+$(\eta(X), \Delta(X))$, where:
 
-- \(\eta(X) = \mathbb{E}[Y \mid X]\) : Bayes regressor,
-- \(\Delta(X)\) is a signed quantity built from
-  posteriors \(P(S=s \mid X)\) and group priors.
+- $\eta(X) = \mathbb{E}[Y \mid X]$ : Bayes regressor,
+- $\Delta(X)$ is a signed quantity built from
+  posteriors $P(S=s \mid X)$ and group priors.
 
 In this repo, we:
 
 1. **Estimate**:
-   - \(\hat\eta(X)\) via a regression model (RandomForestRegressor),
-   - \(P(S \mid X)\) via a classifier (RandomForestClassifier),
-   - \(\hat\Delta(X)\) from those posteriors.
+   - $\hat\eta(X)$ via a regression model (RandomForestRegressor),
+   - $P(S \mid X)$ via a classifier (RandomForestClassifier),
+   - $\hat\Delta(X)$ from those posteriors.
 
-2. **Build empirical measures** \(\mu_+\) and \(\mu_-\) on
-   \(\Omega = \{(h,d) : d \neq 0\}\) from samples of
-   \((h,d) = (\hat\eta_i, \hat\Delta_i)\) with \(d > 0\) and \(d < 0\)
+2. **Build empirical measures** $\mu_+$ and $\mu_-$ on
+   $\Omega = \{(h,d) : d \neq 0\}$ from samples of
+   $(h,d) = (\hat\eta_i, \hat\Delta_i)$ with $d > 0$ and $d < 0$
    (Jordan decomposition idea from the paper).
 
-3. **Solve an OT problem** between \(\mu_+\) and \(\mu_-\) with POT:
+3. **Solve an OT problem** between $\mu_+$ and $\mu_-$ with POT:
    - Cost:
-     \[
+     $$
        C\big( (h_1,d_1),(h_2,d_2) \big)
        = \frac{(h_2 - h_1)^2}{|d_1| + |d_2|}.
-     \]
+     $$
    - Using either exact `emd` or entropic `sinkhorn`.
 
-4. **Construct a discrete barycenter**: from an optimal coupling \(\pi\),
+4. **Construct a discrete barycenter**: from an optimal coupling $\pi$,
    we map each pair of support points to a barycenter value
-   \[
+   $$
      m((h_1,d_1),(h_2,d_2))
      = \frac{h_1/|d_1| + h_2/|d_2|}{1/|d_1| + 1/|d_2|},
-   \]
-   and average these with weights from \(\pi\) to define **fair
+   $$
+   and average these with weights from $\pi$ to define **fair
    predictions at the training points**.
 
 5. **Fit a final 2D regressor**:
-   - Input features: \((\hat\eta_i, \hat\Delta_i)\),
+   - Input features: $(\hat\eta_i, \hat\Delta_i)$,
    - Targets: fair predictions from step 4.
-   - Result: a smooth predictor \(\hat f(x)\) that depends only on
-     \((\hat\eta(x), \hat\Delta(x))\).
+   - Result: a smooth predictor $\hat f(x)$ that depends only on
+     $(\hat\eta(x), \hat\Delta(x))$.
 
 Predictions for new points:
-1. Compute \(\hat\eta(x)\) via the base regressor.
-2. Compute \(P(S \mid x)\) via the classifier; build \(\hat\Delta(x)\).
-3. Apply the final 2D regressor to \((\hat\eta(x), \hat\Delta(x))\).
+1. Compute $\hat\eta(x)$ via the base regressor.
+2. Compute $P(S \mid x)$ via the classifier; build $\hat\Delta(x)$.
+3. Apply the final 2D regressor to $(\hat\eta(x), \hat\Delta(x))$.
 
 ## Code overview
 
@@ -85,13 +86,13 @@ Predictions for new points:
 
 - `fair_unaware/models.py`  
   Wraps the estimation of:
-  - the regression model for \(\eta(X)\),
-  - the classifier for \(P(S \mid X)\),
-  - and the computation of \(\Delta(X)\).
+  - the regression model for $\eta(X)$,
+  - the classifier for $P(S \mid X)$,
+  - and the computation of $\Delta(X)$.
 
 - `fair_unaware/ot_barycenter.py`  
   Core OT logic:
-  - Building empirical measures \(\mu_+\) and \(\mu_-\),
+  - Building empirical measures $\mu_+$ and $\mu_-$,
   - Constructing the cost matrix,
   - Solving OT with POT,
   - Computing barycentric fair predictions from the optimal plan.
@@ -107,7 +108,7 @@ Predictions for new points:
   (mean prediction per group before/after).
 
 - `scripts/run_relaxed_tradeoff.py`  
-  Sweeps the regularization parameter \(\lambda\) for OT and plots the
+  Sweeps the regularization parameter $\lambda$ for OT and plots the
   tradeoff between MSE and fairness (W2 gap).
 
 
@@ -222,7 +223,6 @@ Traces the **MSE vs. fairness tradeoff curve** by sweeping the regularisation pa
 ```bash
 python scripts/run_tradeoff_relaxed.py \
     --dataset lawschool \
-    --lam_grid_ot "0,0.1,0.5,1,5,10,50" \
     --num_runs 5 \
     --cont_map rf \
     --out_dir notes/figs/tradeoff
