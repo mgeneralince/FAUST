@@ -1,11 +1,21 @@
-# Unawareness Fair Regression with OT
+# FAUST
 
-paper:
-> *Demographic Parity in the Unawareness Framework: From Regression to Classification*  
-> (arXiv:2409.02471)
- using
+Code and artifacts for **Geometry of Relaxed Fair Regression: A Unified
+Framework for Aware and Unaware Settings** using
 [Python Optimal Transport (POT)](https://pythonot.github.io) and
 basic `scikit-learn` models.
+
+## Citation 
+
+@article{lince2026geometryrelaxedfairregression,
+      title={Geometry of Relaxed Fair Regression: A Unified Framework for Aware and Unaware Settings}, 
+      author={M. Generali Lince and V. Divol and R. Flamary and S. Gaucher and P. Loiseau},
+      year={2026},
+      eprint={2605.28233},
+      archivePrefix={arXiv},
+      primaryClass={stat.ML},
+      url={https://arxiv.org/abs/2605.28233}, 
+}
 
 ## High-level idea
 
@@ -95,6 +105,10 @@ Predictions for new points:
   Generates a toy dataset, trains the unconstrained regressor and the
   `UnawareFairRegressor`, and prints basic DP statistics
   (mean prediction per group before/after).
+
+- `scripts/run_relaxed_tradeoff.py`  
+  Sweeps the regularization parameter \(\lambda\) for OT and plots the
+  tradeoff between MSE and fairness (W2 gap).
 
 
 # Fair Unaware Regression — Experiment Scripts
