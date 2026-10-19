@@ -132,6 +132,7 @@ All methods are **post-processors**: they take the predictions of a shared uncon
 | `ot` / `OT Unaware` | **OT Unaware** (this work) | Lifts predictions into a 2D pseudo-measure space via the signed density-ratio Δ(x) = P(S=1\|x)/π₁ − P(S=0\|x)/π₀, then solves an exact OT plan between μ⁺ and μ⁻ and reads off fair predictions via barycentric projection. S is **never observed at test time**. |
 | `aware` / `OT Aware` | OT Aware ([Chzhen et al., 2020](https://arxiv.org/abs/2007.14265)) | Computes the Wasserstein-2 barycenter of the per-group prediction distributions, with S **observed at inference**. This is the theoretical optimum and serves as an upper bound for all unaware methods. |
 | `fairreg` / `FairReg` | FairReg ([Tarturyan et al., 2024](https://arxiv.org/abs/2407.15453)) | Grid-based adversarial post-processor. Learns a randomized prediction rule over a discrete grid Ŷ_L ⊂ [−B, B] by minimizing an entropically regularized dual objective via stochastic gradient (AC-SA2). Does not observe S at test time. |
+| `frappe` / `FRAPPÉ` | FRAPPÉ | Parametric post-processor. Learns an additive neural network module T(X) over frozen base predictions to minimize MSE plus a Gaussian MMD Demographic Parity penalty. Does not observe S at test time. |
 | `ablation` / `OT-U (η̃)` | OT Unaware ablation | Same OT Unaware pipeline, but the base regressor η̂(X) is replaced by a **marginalized version of the aware predictor**: η̃(x) = Σ_s P̂(S=s\|x) T_s(η̂(x)). Tests whether performance gains come from the OT geometry or from a better base signal. |
 | `shat` / `OT Ŝ W₂` | Plug-in hard baseline | Applies the **aware** OT maps T_s but substitutes a hard predicted label Ŝ(x) = argmax P̂(S\|x) for the unobserved S at test time. A naive plug-in approach; fails when classification errors corrupt the transport plan. |
 **Fairness metrics** used throughout: W₂ gap between group marginals, TV gap, KS statistic, and DP_max (CDF-based demographic parity).
@@ -201,7 +202,8 @@ Outputs a single `benchmark_table.tex` with `\multirow` formatting grouped by ba
 
 ### `run_tradeoff_relaxed.py`
 
-Traces the **MSE vs. fairness tradeoff curve** by sweeping the regularisation parameter λ for both the OT (L2 and TV penalty) and FairReg methods.
+
+Traces the **MSE vs. fairness tradeoff curve** by sweeping the regularisation parameter λ for OT (L2 and TV penalties), FairReg, and FRAPPÉ.
 
 ```bash
 python scripts/run_tradeoff_relaxed.py \
@@ -224,6 +226,7 @@ python scripts/run_tradeoff_relaxed.py \
 | `--method` | `OT` | Transport solver: `OT` or `Sinkhorn` |
 | `--load_results` | `None` | Path to saved CSV to skip recomputation |
 | `--out_dir` | — | Output directory for plots |
+| `--crop_frappe` | `False` | Crop the plot axes to the OT bounds. |
 
 **Outputs:** Tradeoff curve PDF plots (MSE vs. W₂ / DP_max) saved under `--out_dir`.
 

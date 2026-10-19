@@ -1,4 +1,3 @@
-import os
 import argparse
 from pathlib import Path
 
@@ -10,13 +9,15 @@ from fair_unaware import UnawareFairRegressor
 from sklearn.model_selection import train_test_split
 
 from fair_unaware.diagnostics import plot_basic_diagnostics
-from fair_unaware.metrics import dp_mean_gap   
+from fair_unaware.metrics import dp_mean_gap, w2_1d_weighted
 from data.synthetic import make_synthetic_dataset
+from fair_unaware.utils import relaxed_suffix
 
 
 def main(method="OT", nb_samples=1000, *, out_dir="notes/figs", prefix="example",
          save_suffix="pdf", show=False, with_ot_matrices=False,
-         cont_map="rf", cont_epsilon=0.05, cont_knn=None):
+         cont_map="rf", cont_epsilon=0.05, cont_knn=None, 
+         relax_epsilon=None):
 
     X, S, Y = make_synthetic_dataset(n=nb_samples, random_state=42)
 
@@ -38,7 +39,13 @@ def main(method="OT", nb_samples=1000, *, out_dir="notes/figs", prefix="example"
 
     print("=== Unconstrained regressor ===")
     print(f"MSE      : {mse_base:.3f}")
-    print(f"DP gap   : {dp_base:.3f}")
+    print(f"DP mean gap   : {dp_base:.3f}")
+    print("DP W2  : "
+          f"{w2_1d_weighted(y_pred_base[S_te == 0], 
+                           np.full(np.sum(S_te == 0), 1.0/np.sum(S_te == 0)),
+                           y_pred_base[S_te == 1], 
+                           np.full(np.sum(S_te == 1), 1.0/np.sum(S_te == 1))):.3f}"
+    )
 
     # Unawareness fair regressor
     if method not in {"OT", "Sinkhorn"}:
@@ -58,6 +65,7 @@ def main(method="OT", nb_samples=1000, *, out_dir="notes/figs", prefix="example"
         random_state=42,
         verbose=True,
         store_diagnostics=True,
+        relax_epsilon=relax_epsilon, 
     )
 
 
@@ -65,18 +73,28 @@ def main(method="OT", nb_samples=1000, *, out_dir="notes/figs", prefix="example"
     y_pred_fair = fair_model.predict(X_te)
 
     mse_fair = np.mean((y_pred_fair - Y_te) ** 2)
-    dp_fair = dp_mean_gap(y_pred_fair, S_te)
+    dp_mean_fair = dp_mean_gap(y_pred_fair, S_te)
 
     print("\n=== Unawareness fair regressor ===")
     print(f"MSE      : {mse_fair:.3f}")
-    print(f"DP gap   : {dp_fair:.3f}")
+    print(f"DP mean gap   : {dp_mean_fair:.3f}")
+    print("DP W2  : "
+          f"{w2_1d_weighted(y_pred_fair[S_te == 0], 
+                           np.full(np.sum(S_te == 0), 1.0/np.sum(S_te == 0)),
+                           y_pred_fair[S_te == 1], 
+                           np.full(np.sum(S_te == 1), 1.0/np.sum(S_te == 1))):.3f}"
+    )
 
-        #generate basicplots (with_ot_matrices= matrices non agrégées mais on voit rien) 
+    #generate basicplots (with_ot_matrices= matrices non agrégées mais on voit rien) 
     print("\nGenerating diagnostic plots (including OT internals)...")
     fig_root = Path(out_dir)
-    run_dir = fig_root / method / f"{cont_map}" / str(nb_samples)
+    suffix = relaxed_suffix(relax_epsilon)
+    run_dir = fig_root / method / cont_map / suffix / str(nb_samples)
+    train_dir = run_dir / "train"
+    # run_dir = fig_root / method / f"{cont_map}" / str(nb_samples)
     run_dir.mkdir(parents=True, exist_ok=True)
     save_prefix = run_dir / prefix
+    save_prefix_train = train_dir / prefix 
 
 
     plot_basic_diagnostics(
@@ -90,7 +108,20 @@ def main(method="OT", nb_samples=1000, *, out_dir="notes/figs", prefix="example"
         save_suffix=save_suffix,
         save_transport=True,
     )
-    
+
+    plot_basic_diagnostics(
+        fair_model,
+        X_tr,
+        S_tr,
+        Y_tr,
+        show=show,
+        save_prefix=str(save_prefix_train),
+        with_ot_matrices=with_ot_matrices,
+        save_suffix=save_suffix,
+        save_transport=True,
+    )
+
+
     #store timings 
     print("Timing breakdown (in seconds):")
     for k, v in fair_model.timings_.items():
@@ -112,6 +143,14 @@ if __name__ == "__main__":
     parser.add_argument("--cont_map", choices=["rf", "entropic"], default="rf")
     parser.add_argument("--cont_epsilon", type=float, default=0.05)
     parser.add_argument("--cont_knn", type=int, default=None)
+    parser.add_argument(
+        "--relax_epsilon",
+        type=float,
+        default=None,
+        help="If set in [0,1], enforce W2(final) <= epsilon_ratio * W2(base). "
+         "If None, uses unrelaxed OT."
+    )
+
 
     args = parser.parse_args()
 
@@ -126,5 +165,6 @@ if __name__ == "__main__":
     cont_map=args.cont_map,
     cont_epsilon=args.cont_epsilon,
     cont_knn=args.cont_knn,
+    relax_epsilon=args.relax_epsilon,
 )
 

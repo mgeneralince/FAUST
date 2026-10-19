@@ -45,7 +45,6 @@ def import_fairreg_modules(fairreg_root: str | Path | None = None) -> Dict[str, 
       data_prep.py, FairReg.py, evaluation_measures.py, and the data/ folder.
     """
     if fairreg_root is None:
-        # try importing from environment
         data_prep = importlib.import_module("data_prep")
         eval_measures = importlib.import_module("evaluation_measures")
         fairreg_mod = importlib.import_module("FairReg")
@@ -106,7 +105,8 @@ def load_dataset(
         y_scaled = scaler.fit_transform(pd.Series(y).values.reshape(-1, 1))
         y = pd.Series(y_scaled.flatten(), index=pd.Series(y).index if hasattr(y, "index") else None)
 
-    #subsample to 2000 for adult/lawschool unless full_data (matches FairReg evaluation protocol even thoug i still don't understand why they do this)
+    #subsample to 2000 for adult/lawschool unless full_data (matches FairReg evaluation protocol even thoug i still don't understand why they do this 
+    # probably for the Agarwal method they compare to which must be very slow )
     if (dataset in {"adult", "lawschool"}) and (not full_data):
         sample_size = 2000
         X, _, S, _, y, _ = train_test_split(

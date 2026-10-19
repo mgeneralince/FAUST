@@ -42,7 +42,6 @@ def plot_fairreg_history(fair_reg, X, S, y, *, data_scaling=False, scaler=None,
     axes[0].set_xlabel("iteration")
     axes[0].set_ylabel("risk")
 
-    #unf_hist is a list of dicts {group -> scalar}
     groups = sorted(list(unf_hist[0].keys()))
     for g in groups:
         series = np.array([d[g] for d in unf_hist], dtype=float)
@@ -107,11 +106,15 @@ def plot_pred_kde_by_group(preds, S, *, title="", savepath=None):
     groups = sorted(S.unique().tolist())
 
     n = len(preds)
-    fig, axes = plt.subplots(1, n, figsize=(5*n, 4), sharey=True)
-    if n == 1:
+    cols = min(3, n)
+    rows = int(np.ceil(n / 3))
+    fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 4*rows), sharey=True)
+    if rows == 1 and cols == 1:
         axes = [axes]
+    else:
+        axes = np.asarray(axes).reshape(-1)
 
-    for ax, (name, yhat) in zip(axes, preds.items()):
+    for ax, (name, yhat) in zip(axes[:n], preds.items()):
         yhat = np.asarray(yhat)
         xs = np.linspace(np.min(yhat), np.max(yhat), 300)
 
@@ -127,6 +130,9 @@ def plot_pred_kde_by_group(preds, S, *, title="", savepath=None):
         ax.set_ylabel("density")
         ax.legend()
 
+    for ax in axes[n:]:
+        ax.set_visible(False)
+
     fig.suptitle(title)
     fig.tight_layout()
 
@@ -136,6 +142,7 @@ def plot_pred_kde_by_group(preds, S, *, title="", savepath=None):
         plt.close(fig)
 
     return fig
+
 
 
 def plot_true_vs_pred(y_true, preds, *, title="", savepath=None):
@@ -145,11 +152,16 @@ def plot_true_vs_pred(y_true, preds, *, title="", savepath=None):
     """
     y_true = np.asarray(y_true)
     n = len(preds)
-    fig, axes = plt.subplots(1, n, figsize=(5*n, 4))
-    if n == 1:
+    cols = min(3, n)
+    rows = int(np.ceil(n / 3))
+    fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 4*rows))
+    if rows == 1 and cols == 1:
         axes = [axes]
+    else:
+        axes = np.asarray(axes).reshape(-1)
 
-    for ax, (name, yhat) in zip(axes, preds.items()):
+    # Plot each model
+    for ax, (name, yhat) in zip(axes[:n], preds.items()):
         yhat = np.asarray(yhat)
         ax.scatter(y_true, yhat, s=8, alpha=0.6)
         lo = min(y_true.min(), yhat.min())
@@ -158,6 +170,10 @@ def plot_true_vs_pred(y_true, preds, *, title="", savepath=None):
         ax.set_title(name)
         ax.set_xlabel("y_true")
         ax.set_ylabel("y_pred")
+
+    # Hide unused axes 
+    for ax in axes[n:]:
+        ax.set_visible(False)
 
     fig.suptitle(title)
     fig.tight_layout()
@@ -168,6 +184,8 @@ def plot_true_vs_pred(y_true, preds, *, title="", savepath=None):
         plt.close(fig)
 
     return fig
+
+
 
 
 def plot_tradeoff_curve(points, *, title="", savepath=None):
@@ -194,3 +212,9 @@ def plot_tradeoff_curve(points, *, title="", savepath=None):
         plt.close(fig)
 
     return fig
+
+
+
+
+
+
