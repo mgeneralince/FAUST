@@ -361,7 +361,7 @@ def run_one_all_methods(
         print(f"FairReg failed: {e}")
         pass
 
-    # --- FRAPPÉ baseline ---
+    #FRAPPÉ 
     y_frappe = np.full_like(Y_te, np.nan, dtype=float)
     try:
         if use_oracle:
@@ -372,7 +372,7 @@ def run_one_all_methods(
         frappe_model = FrappeRegressor(
             base_regressor=reg_frappe, 
             hidden_dims=(64,), 
-            lam=100.0, # High penalty for strict fairness
+            lam=100.0, 
             epochs=100,
             lr=0.01
         )
@@ -381,7 +381,6 @@ def run_one_all_methods(
     except Exception as e:
         print(f"FRAPPÉ failed: {e}")
 
-    # common bins for DPmax (use all finite predictions so bins cover everyone)
     preds_for_bins = [y_base, y_ot, y_aware, y_fairreg, y_ot_ablation, y_shat, y_frappe]
     all_preds = np.concatenate([p.ravel() for p in preds_for_bins if p is not None and np.all(np.isfinite(p))])
     lo, hi = np.min(all_preds), np.max(all_preds)

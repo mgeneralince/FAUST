@@ -1,4 +1,4 @@
-# FAUST
+# FAUST: Geometry of Relaxed Fair Regression: A Unified Framework for Aware and Unaware Settings
 
 Code and artifacts for **Geometry of Relaxed Fair Regression: A Unified
 Framework for Aware and Unaware Settings** using
@@ -144,13 +144,14 @@ All methods are **post-processors**: they take the predictions of a shared uncon
 | Key | Full name | Description |
 |---|---|---|
 | `base` / `ERM` | Unconstrained ERM | Raw predictions of the base regressor η̂(X). Unfair reference point. |
-| `ot` / `OT Unaware` | **OT Unaware** (this work) | Lifts predictions into a 2D pseudo-measure space via the signed density-ratio Δ(x) = P(S=1\|x)/π₁ − P(S=0\|x)/π₀, then solves an exact OT plan between μ⁺ and μ⁻ and reads off fair predictions via barycentric projection. S is **never observed at test time**. |
-| `aware` / `OT Aware` | OT Aware ([Chzhen et al., 2020](https://arxiv.org/abs/2007.14265)) | Computes the Wasserstein-2 barycenter of the per-group prediction distributions, with S **observed at inference**. This is the theoretical optimum and serves as an upper bound for all unaware methods. |
+| `ot` / `FAUST-U` | **FAUST-U** (this work) | Lifts predictions into a 2D pseudo-measure space via the signed density-ratio Δ(x) = P(S=1\|x)/π₁ − P(S=0\|x)/π₀, then solves an exact OT plan between μ⁺ and μ⁻ and reads off fair predictions via barycentric projection. S is **never observed at test time**. |
+| `aware` / `FAUST-A` | FAUST-A ([Chzhen et al., 2020](https://arxiv.org/abs/2007.14265)) | Computes the Wasserstein-2 barycenter of the per-group prediction distributions, with S **observed at inference**. This is the theoretical optimum and serves as an upper bound for all unaware methods. |
 | `fairreg` / `FairReg` | FairReg ([Tarturyan et al., 2024](https://arxiv.org/abs/2407.15453)) | Grid-based adversarial post-processor. Learns a randomized prediction rule over a discrete grid Ŷ_L ⊂ [−B, B] by minimizing an entropically regularized dual objective via stochastic gradient (AC-SA2). Does not observe S at test time. |
 | `frappe` / `FRAPPÉ` | FRAPPÉ ([Tifrea et al., 2024](https://arxiv.org/abs/2312.02592)) | Learns an additive neural network module T(X) over fixed base predictions to minimize MSE plus a Gaussian MMD Demographic Parity penalty. Does not observe S at test time. |
-| `ablation` / `OT-U (η̃)` | OT Unaware ablation | Same OT Unaware pipeline, but the base regressor η̂(X) is replaced by a **marginalized version of the aware predictor**: η̃(x) = Σ_s P̂(S=s\|x) T_s(η̂(x)). Tests whether performance gains come from the OT geometry or from a better base signal. |
-| `shat` / `OT Ŝ W₂` | Plug-in hard baseline | Applies the **aware** OT maps T_s but substitutes a hard predicted label Ŝ(x) = argmax P̂(S\|x) for the unobserved S at test time. A naive plug-in approach; fails when classification errors corrupt the transport plan. |
-**Fairness metrics** used throughout: W₂ gap between group marginals, TV gap, KS statistic, and DP_max (CDF-based demographic parity).
+| `ablation` / `FAUST-U (η̃)` | OT Unaware ablation | Same OT Unaware pipeline, but the base regressor η̂(X) is replaced by a **marginalized version of the aware predictor**: η̃(x) = Σ_s P̂(S=s\|x) T_s(η̂(x)). Tests whether performance gains come from the OT geometry or from a better base signal. |
+| `shat` / `Plug-In ` $W_2$ | Plug-in hard baseline | Applies the **aware** OT maps T_s but substitutes a hard predicted label Ŝ(x) = argmax P̂(S\|x) for the unobserved S at test time. A naive plug-in approach; fails when classification errors corrupt the transport plan. |
+
+**Fairness metrics** used throughout: $W_2$ gap between group marginals, TV gap, KS statistic, and DP_max (CDF-based demographic parity).
 
 ---
 
@@ -242,7 +243,7 @@ python scripts/run_tradeoff_relaxed.py \
 | `--out_dir` | — | Output directory for plots |
 | `--crop_frappe` | `False` | Crop the plot axes to the OT bounds. |
 
-**Outputs:** Tradeoff curve PDF plots (MSE vs. W₂ / DP_max) saved under `--out_dir`.
+**Outputs:** Tradeoff curve PDF plots (MSE vs. $W_2$ / DP_max) saved under `--out_dir`.
 
 ---
 
@@ -250,10 +251,10 @@ python scripts/run_tradeoff_relaxed.py \
 
 Runs a controlled **1D synthetic experiment** to visualise the exact geometric effect of the OT relaxations. Two penalty types are compared in both the aware and unaware settings:
 
-- **W₂ (L2) relaxation:** The cost matrix is modified to `C_λ(x₁,x₂) = [λ/(1+λ(a₁+a₂))] · (h₁−h₂)²`, which induces a smooth global interpolation — all predictions are gently shifted toward the fair barycenter proportionally to their density-ratio weights.
+- **$W_2$ (L2) relaxation:** The cost matrix is modified to `C_λ(x₁,x₂) = [λ/(1+λ(a₁+a₂))] · (h₁−h₂)²`, which induces a smooth global interpolation — all predictions are gently shifted toward the fair barycenter proportionally to their density-ratio weights.
 - **TV relaxation:** The cost is `C_λ(x₁,x₂) = min(λ, (h₁−h₂)²/(a₁+a₂))`, which acts as a hard-thresholding operator — pairs whose disparity cost falls below λ are perfectly merged to their weighted mean, while all others are left completely unchanged.
 
-Both penalties are calibrated at five exact W₂ unfairness levels (0%, 20%, 40%, 60%, 80% of the baseline gap) via a numerical line search over λ, so comparisons are equitable.
+Both penalties are calibrated at five exact $W_2$ unfairness levels (0%, 20%, 40%, 60%, 80% of the baseline gap) via a numerical line search over λ, so comparisons are equitable.
 
 ```bash
 python scripts/run_toy_comparison_metrics.py
@@ -295,7 +296,7 @@ python scripts/run_example_confounded.py \
 
 **Outputs** (under `notes/figs/confounded/<oracle_folder>/<cont_map>/`):
 - Relative and absolute gamma-sweep PDFs
-- MSE vs. W₂ tradeoff scatter plot
+- MSE vs. $W_2$ tradeoff scatter plot
 - Within-group variance sweep plot
 - LaTeX table (`tables/sweep_*.tex`)
 - Raw results CSV
@@ -312,7 +313,7 @@ pip install -r requirements.txt
 ```
 
 
-To use the **FairReg** baseline, pass `--fairreg_root /path/to/unaware-fair-reg`.
+To use the **FairReg** baseline, pass `--fairreg_root /path/to/unaware-fair-reg` when running the scripts.
 
 ---
 
@@ -320,7 +321,7 @@ To use the **FairReg** baseline, pass `--fairreg_root /path/to/unaware-fair-reg`
 
 | Symbol | Name | Description |
 |---|---|---|
-| W₂ gap | Wasserstein-2 gap | W₂ distance between per-group prediction marginals.|
+| $W_2$ gap | Wasserstein-2 gap | $W_2$ distance between per-group prediction marginals.|
 | TV | Total Variation gap | L1 distance between per-group CDFs. |
 | KS | Kolmogorov–Smirnov | Max absolute CDF difference between groups. |
 | DP_max | Demographic Parity max | Maximum KS gap swept over a threshold grid. |

@@ -203,7 +203,6 @@ def compute_barycentric_predictions_from_plan(
     den = abs_dp + abs_dm
     num = hp * abs_dm + hm * abs_dp
 
-    # exact formula, numerically stable; handle the rare 0/0 case
     M = np.divide(num, den, out=0.5 * (hp + hm), where=den > 0)
 
 
